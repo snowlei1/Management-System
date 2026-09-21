@@ -1,0 +1,19 @@
+{
+  "renderer": "Microsoft Word",
+  "rendered_pdf": "tmp/docs/0920-teacher-comments-revised.pdf",
+  "page_count": 14,
+  "task_book_pages": "1-5",
+  "opening_report_pages": "6-14",
+  "checked_pages": "1-14",
+  "checks": {
+    "text_overflow_or_clipping": false,
+    "abnormal_character_spacing": false,
+    "broken_table_borders": false,
+    "orphan_headings": false,
+    "unexpected_blank_pages": false,
+    "signature_area_broken": false,
+    "duplicate_vertical_labels_in_same_cell": false,
+    "references_complete": true,
+    "body_citations_visibly_superscript": true
+  }
+}
