@@ -1,8 +1,8 @@
 -- 概念与逻辑设计对应 docs/05-领域模型.md 和 docs/06-数据库设计.md。
 -- 本脚本只建结构，不创建真实用户或业务数据。
-CREATE DATABASE IF NOT EXISTS civics_resources
+CREATE DATABASE IF NOT EXISTS `management-system`
   CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
-USE civics_resources;
+USE `management-system`;
 
 CREATE TABLE IF NOT EXISTS role (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,

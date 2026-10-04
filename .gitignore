@@ -9,3 +9,4 @@ frontend/dist/
 .env.local
 *.log
 tmp/
+backend/config/application-local.yml

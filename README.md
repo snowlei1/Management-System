@@ -1,40 +1,62 @@
 # 课程思政教学资源管理系统
 
-课题：基于SpringBoot的课程思政教学资源管理系统设计与实现。
+课题名称：基于SpringBoot的课程思政教学资源管理系统设计与实现。
 
-当前仓库处于“系统分析与设计基线 + 可启动骨架”阶段。业务功能尚未实现，具体范围与模型见 [`docs/`](docs/01-需求分析.md)。
+当前完成第一阶段业务开发：登录认证、三类角色权限、管理员用户管理和基础前端框架。课程、教学资源、审核、收藏与统计等模块尚未开发，不能将本阶段页面视为完整系统。
 
-## 环境
+## 技术环境
 
-- JDK 21、Maven 3.9.9
-- Node.js 22、pnpm 11
-- MySQL 8.0
+JDK 21.0.11、Maven 3.9.9、Spring Boot 3.5.7、Spring Security 6.5.6、Spring JDBC、MySQL Server 8.0.39、Vue 3.5.13、Vue Router 4.5.1、Vite 6.3.5、Node.js 22.14.0、pnpm 11.25.0。后端 MySQL Connector/J 由 Spring Boot 管理，当前解析版本为 9.4.0。
 
-## 本地运行
+认证采用 Spring Security 服务端会话、HttpOnly Session Cookie 和 CSRF 令牌；密码采用 BCrypt(12) 散列。没有使用 JWT、Redis、OAuth2 或额外的令牌表。角色固定为 `ADMIN`、`TEACHER`、`STUDENT`，每个用户只关联一个角色。
 
-先在 MySQL 中创建项目专用数据库 `civics_resources`，并为项目账号授予该数据库所需权限。数据库凭据不提交仓库。PowerShell 示例：
+## 初始化数据库
+
+本机项目库为 `management-system`。先使用 MySQL Workbench 或客户端执行 [`database/schema.sql`](database/schema.sql)，再仅在**本地开发环境**执行 [`database/dev-seed.sql`](database/dev-seed.sql)。前者建立既有设计的 11 张表；后者加入三种固定角色和三个开发测试账号，不会覆盖同名已有用户。
+
+`dev-seed.sql` 仅供毕业设计本地测试，**不得在公开或正式环境运行**。如果将系统部署到其他环境，应创建独立账号并使用新密码；不要沿用下表的测试密码。
+
+| 角色 | 本地测试账号 | 本地测试密码 |
+|---|---|---|
+| 管理员 | `dev_admin` | `AdminDev#2026` |
+| 教师 | `dev_teacher` | `TeacherDev#2026` |
+| 学生 | `dev_student` | `StudentDev#2026` |
+
+数据库连接写在 `backend/config/application-local.yml`，可从 [`application-local.example.yml`](backend/config/application-local.example.yml) 复制并修改。实际配置文件已加入 `.gitignore`，**不要提交数据库账号密码**。也可使用 `DB_URL`、`DB_USER`、`DB_PASSWORD` 环境变量覆盖连接信息。建议本地使用仅获项目库权限的账号；本阶段本机验证暂使用已有连接。
+
+## 运行
+
+在 `backend/` 执行：
 
 ```powershell
-$env:DB_URL = 'jdbc:mysql://127.0.0.1:3306/civics_resources?useUnicode=true&characterEncoding=utf8'
-$env:DB_USER = '你的项目账号'
-$env:DB_PASSWORD = '你的项目密码'
-cd backend
 mvn spring-boot:run
 ```
 
-另开终端启动前端：
+另开终端，在 `frontend/` 执行：
 
 ```powershell
-cd frontend
 pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-访问 `http://127.0.0.1:5173/`。页面通过 Vite 代理请求 `GET /api/system/ping`，后端执行 `SELECT 1` 验证 MySQL 连接。统一响应结构为 `{code,message,data}`。此接口只用于骨架连通性检查。
+浏览器访问 `http://127.0.0.1:5173/`。Vite 将 `/api` 代理至本机 8080 端口。前端不保存密码或令牌；后端负责最终角色校验，前端菜单和路由守卫只是界面层控制。
 
-## 目录
+## 本轮接口
 
-- `docs/`：需求、权限、用例、流程、领域模型、数据库、架构及一致性检查。
-- `database/schema.sql`：与 11 张逻辑表对应的 MySQL 建表脚本；当前骨架接口本身不依赖业务表。
-- `backend/`：Spring Boot 最小后端、统一响应、统一异常和连接检查接口。
-- `frontend/`：Vue + Vite 最小前端及接口通信。
+| 方法与路径 | 作用 | 权限 |
+|---|---|---|
+| `GET /api/auth/csrf` | 获取当前会话的 CSRF 令牌 | 公开 |
+| `POST /api/auth/login` | 账号密码登录 | 公开，需 CSRF |
+| `GET /api/auth/me` | 当前用户信息 | 已登录 |
+| `POST /api/auth/logout` | 退出并失效会话 | 已登录，需 CSRF |
+| `GET /api/users` | 分页、关键词、角色、状态查询 | 管理员 |
+| `POST /api/users` | 新增教师或学生 | 管理员 |
+| `PUT /api/users/{id}` | 修改账号、姓名及允许的角色 | 管理员 |
+| `PATCH /api/users/{id}/status` | 启用或禁用非管理员账号 | 管理员 |
+| `GET /api/system/ping` | 基础数据库连通检查 | 已登录 |
+
+响应统一为 `{code,message,data}`。管理员账号不能通过用户管理接口新增或停用；已有资源创建者不能随意改变角色；禁用用户的既有会话在下一次请求时失效。
+
+## 验证与设计文档
+
+后端单元测试：在 `backend/` 执行 `mvn test`。前端构建：在 `frontend/` 执行 `pnpm build`。本机真实数据库、HTTP 与浏览器操作结果见 [`docs/10-认证权限与用户管理实现记录.md`](docs/10-认证权限与用户管理实现记录.md)。原设计基线保存在 [`docs/`](docs/01-需求分析.md)，本轮没有改动任务书和开题报告。
