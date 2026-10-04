@@ -30,6 +30,12 @@ async function signOut() {
       <nav aria-label="主导航">
         <RouterLink to="/" exact-active-class="active">首页</RouterLink>
         <RouterLink v-if="authState.user?.role === 'ADMIN'" to="/users" active-class="active">用户管理</RouterLink>
+        <div v-if="authState.user?.role === 'ADMIN'" class="nav-group">
+          <span class="nav-group-title">基础数据管理</span>
+          <RouterLink to="/courses" active-class="active">课程管理</RouterLink>
+          <RouterLink to="/ideological-elements" active-class="active">课程思政元素管理</RouterLink>
+          <RouterLink to="/resource-categories" active-class="active">资源分类管理</RouterLink>
+        </div>
         <RouterLink to="/profile" active-class="active">个人信息</RouterLink>
       </nav>
       <p class="sidebar-note">当前阶段仅开放已实现功能</p>

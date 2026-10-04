@@ -58,6 +58,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(config -> config
                         .requestMatchers("/api/auth/csrf", "/api/auth/login").permitAll()
                         .requestMatchers("/api/users", "/api/users/**").hasRole("ADMIN")
+                        .requestMatchers("/api/courses", "/api/courses/**",
+                                "/api/ideological-elements", "/api/ideological-elements/**",
+                                "/api/resource-categories", "/api/resource-categories/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .exceptionHandling(config -> config
                         .authenticationEntryPoint((request, response, exception) -> writer.write(response,

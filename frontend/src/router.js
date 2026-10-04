@@ -5,6 +5,7 @@ import AppLayout from './views/AppLayout.vue'
 import HomeView from './views/HomeView.vue'
 import ProfileView from './views/ProfileView.vue'
 import UserManagementView from './views/UserManagementView.vue'
+import BaseDataManagementView from './views/BaseDataManagementView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -15,6 +16,9 @@ const router = createRouter({
         { path: '', name: 'home', component: HomeView },
         { path: 'profile', name: 'profile', component: ProfileView },
         { path: 'users', name: 'users', component: UserManagementView, meta: { role: 'ADMIN' } },
+        { path: 'courses', name: 'courses', component: BaseDataManagementView, props: { kind: 'courses' }, meta: { role: 'ADMIN' } },
+        { path: 'ideological-elements', name: 'ideological-elements', component: BaseDataManagementView, props: { kind: 'ideological-elements' }, meta: { role: 'ADMIN' } },
+        { path: 'resource-categories', name: 'resource-categories', component: BaseDataManagementView, props: { kind: 'resource-categories' }, meta: { role: 'ADMIN' } },
       ],
     },
     { path: '/:pathMatch(.*)*', redirect: '/' },
