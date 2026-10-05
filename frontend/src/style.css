@@ -130,6 +130,14 @@ td.actions { white-space: nowrap; }
 .resource-details dt { color: #718496; }
 .resource-details dd { margin: 0; overflow-wrap: anywhere; }
 .preserve-lines { white-space: pre-wrap; }
+.audit-history, .review-attachment { margin-top: 28px; padding-top: 24px; border-top: 1px solid #e0e8ee; }
+.audit-timeline { padding-left: 24px; }
+.audit-timeline li { margin: 18px 0; overflow-wrap: anywhere; }
+.audit-timeline p { margin: 6px 0; }
+.attachment-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
+.pdf-review { border: 1px solid #dce5ec; border-radius: 8px; padding: 12px; overflow: auto; }
+.pdf-review-canvas { display: block; max-width: 100%; margin: 16px auto 0; }
+.review-image { display: block; max-width: 100%; max-height: 600px; object-fit: contain; }
 
 @media (max-width: 760px) {
   .app-shell { display: block; }

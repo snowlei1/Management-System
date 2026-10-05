@@ -3,6 +3,7 @@ import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { resourceDraftApi } from '../api/resources.js'
 import { getCourseOptions, getIdeologicalElementOptions, getResourceCategoryOptions } from '../api/baseData.js'
+import { editableResource } from '../api/resourceState.js'
 
 const route = useRoute(), router = useRouter()
 const editing = computed(() => route.name === 'resource-edit')
@@ -22,6 +23,7 @@ watch(() => route.fullPath, async () => {
     if (current !== sequence) return
     courses.value = cs; categories.value = ks; elements.value = es; policy.value = rules; existing.value = detail
     if (detail) {
+      if (!editableResource(detail)) throw new Error('待审核或已通过资源不能编辑，请返回资源详情。')
       Object.assign(form, { title: detail.title, description: detail.description || '', courseId: detail.courseId, categoryId: detail.categoryId, elementIds: detail.elements.map(e => e.id) })
       if (!cs.some(c => c.id === detail.courseId)) courses.value.push({ id: detail.courseId, name: `${detail.courseName}（已停用，请重新选择）`, inactive: true })
       if (!ks.some(c => c.id === detail.categoryId)) categories.value.push({ id: detail.categoryId, name: `${detail.categoryName}（已停用，请重新选择）`, inactive: true })
@@ -53,7 +55,7 @@ async function save() {
 </script>
 
 <template>
-  <section class="page-heading heading-row"><div><p class="eyebrow">教学资源草稿</p><h1>{{ editing ? '编辑资源' : '新建资源' }}</h1><p class="muted">草稿可暂不标注思政元素；未来提交审核时须至少选择一个有效元素。</p></div><RouterLink class="secondary" to="/my-resources">返回列表</RouterLink></section>
+  <section class="page-heading heading-row"><div><p class="eyebrow">教学资源管理</p><h1>{{ editing ? '编辑资源' : '新建资源' }}</h1><p class="muted">草稿可暂不标注思政元素；提交审核时须至少一个有效元素。驳回后保存仍保持驳回状态，需要另行重新提交。</p></div><RouterLink class="secondary" to="/my-resources">返回列表</RouterLink></section>
   <section class="card resource-form-card">
     <p v-if="loading" class="muted">正在加载资源与可用基础数据…</p><p v-if="error" class="message error" role="alert">{{ error }}</p>
     <form v-if="ready" @submit.prevent="save">
@@ -67,7 +69,7 @@ async function save() {
         <input id="draft-file" ref="fileInput" type="file" :accept="accept" :required="!editing" @change="selectFile" />
         <p class="field-hint">单文件上限 {{ (policy.maxSizeBytes / 1024 / 1024).toFixed(0) }} MiB；支持 {{ policy.allowedExtensions.join('、').toUpperCase() }}。服务器会再次校验类型、大小和内容特征；不支持视频。</p>
         <p v-if="file" class="field-hint">已选择：{{ file.name }} · {{ (file.size / 1024).toFixed(1) }} KiB</p>
-        <div class="modal-actions"><RouterLink class="secondary" to="/my-resources">取消</RouterLink><button class="primary" type="submit">{{ saving ? '保存中…' : '保存草稿' }}</button></div>
+        <div class="modal-actions"><RouterLink class="secondary" to="/my-resources">取消</RouterLink><button class="primary" type="submit">{{ saving ? '保存中…' : existing?.status === 'REJECTED' ? '保存修改' : '保存草稿' }}</button></div>
       </fieldset>
     </form>
   </section>

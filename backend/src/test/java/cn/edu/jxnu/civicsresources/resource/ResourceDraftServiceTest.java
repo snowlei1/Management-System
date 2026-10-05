@@ -25,13 +25,14 @@ import org.springframework.transaction.support.DefaultTransactionStatus;
 class ResourceDraftServiceTest {
     @Mock ResourceDraftRepository repository;
     @Mock LocalResourceFileStorage files;
+    @Mock AuditRecordRepository audits;
     ResourceDraftService service;
     final UserPrincipal teacher = new UserPrincipal(7,"teacher","hash","TEACHER","ACTIVE");
     final MockMultipartFile upload = new MockMultipartFile("file","a.pdf","application/pdf",LocalResourceFileStorageTest.pdf());
     final StoredResourceFile saved = new StoredResourceFile("new-key","a.pdf","application/pdf",30);
-    @BeforeEach void setup() { service = new ResourceDraftService(repository,files,new TestTransactionManager()); }
+    @BeforeEach void setup() { service = new ResourceDraftService(repository,files,new TestTransactionManager(),audits); }
     ResourceDraftRequest request(List<Long> ids) { return new ResourceDraftRequest(" 标题 "," 简介 ",1L,2L,ids); }
-    TeachingResource row(String status) { var t=LocalDateTime.of(2026,10,5,12,0); return new TeachingResource(10,"标题","简介",1,"课程","ACTIVE",2,"分类","ACTIVE",7,status,"old-key","old.pdf","application/pdf",30,t,t); }
+    TeachingResource row(String status) { var t=LocalDateTime.of(2026,10,5,12,0); return new TeachingResource(10,"标题","简介",1,"课程","ACTIVE",2,"分类","ACTIVE",7,status,"old-key","old.pdf","application/pdf",30,t,t,"教师",0,null); }
     void references() { when(repository.activeCourse(1)).thenReturn(true); when(repository.activeCategory(2)).thenReturn(true); }
     void owned(boolean lock,String status) { when(repository.findOwned(10,7,lock)).thenReturn(Optional.of(row(status))); }
     @Test void draftWithZeroElementsAndSessionCreator() {
@@ -50,9 +51,14 @@ class ResourceDraftServiceTest {
         assertStatus(HttpStatus.NOT_FOUND,()->service.detail(teacher,10)); assertStatus(HttpStatus.NOT_FOUND,()->service.update(teacher,10,request(List.of()),upload));
         assertStatus(HttpStatus.NOT_FOUND,()->service.delete(teacher,10)); verifyNoInteractions(files);
     }
-    @ParameterizedTest @ValueSource(strings={"PENDING","APPROVED","REJECTED"}) void onlyDraft(String status) {
-        owned(false,status); owned(true,status); assertStatus(HttpStatus.CONFLICT,()->service.detail(teacher,10));
+    @ParameterizedTest @ValueSource(strings={"PENDING","APPROVED"}) void frozenStates(String status) {
+        owned(false,status); owned(true,status); assertEquals(status,service.detail(teacher,10).status());
         assertStatus(HttpStatus.CONFLICT,()->service.update(teacher,10,request(List.of()),upload)); assertStatus(HttpStatus.CONFLICT,()->service.delete(teacher,10)); verifyNoInteractions(files);
+    }
+    @Test void rejectedEditRetainsState() {
+        references(); owned(true,"REJECTED"); owned(false,"REJECTED");
+        assertEquals("REJECTED",service.update(teacher,10,request(List.of()),null).status());
+        verify(repository,never()).submit(anyLong(),anyString());
     }
     @Test void invalidCourse() { assertStatus(HttpStatus.BAD_REQUEST,()->service.create(teacher,request(List.of()),upload)); verifyNoInteractions(files); }
     @Test void invalidCategory() { when(repository.activeCourse(1)).thenReturn(true); assertStatus(HttpStatus.BAD_REQUEST,()->service.create(teacher,request(List.of()),upload)); verifyNoInteractions(files); }
@@ -80,7 +86,7 @@ class ResourceDraftServiceTest {
         assertThrows(BusinessException.class,()->ResourceDraftService.normalize(new ResourceDraftRequest("x".repeat(201),null,1L,2L,List.of())));
         assertThrows(BusinessException.class,()->ResourceDraftService.normalize(new ResourceDraftRequest("x","x".repeat(2001),1L,2L,List.of())));
         assertThrows(BusinessException.class,()->ResourceDraftService.normalize(request(Arrays.asList(3L,null)))); assertThrows(BusinessException.class,()->ResourceDraftService.normalize(request(List.of(-1L))));
-        assertStatus(HttpStatus.BAD_REQUEST,()->service.list(teacher,null,null,null,null,0,10)); assertStatus(HttpStatus.BAD_REQUEST,()->service.list(teacher,null,null,null,"APPROVED",1,10)); verifyNoInteractions(repository,files);
+        assertStatus(HttpStatus.BAD_REQUEST,()->service.list(teacher,null,null,null,null,0,10)); assertStatus(HttpStatus.BAD_REQUEST,()->service.list(teacher,null,null,null,"PENDING_REVIEW",1,10)); verifyNoInteractions(repository,files);
     }
     void assertStatus(HttpStatus status,Runnable action) { assertEquals(status,assertThrows(BusinessException.class,action::run).status()); }
     // Real Spring synchronization callbacks, no external DB needed for these unit tests.

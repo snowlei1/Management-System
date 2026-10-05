@@ -13,4 +13,12 @@ export const resourceDraftApi = {
   create: (metadata, file) => api('/teacher/resources', { method: 'POST', body: multipart(metadata, file) }),
   update: (id, metadata, file) => api(`/teacher/resources/${id}`, { method: 'PUT', body: multipart(metadata, file) }),
   remove: id => api(`/teacher/resources/${id}`, { method: 'DELETE' }),
+  submit: id => api(`/teacher/resources/${id}/submit`, { method: 'POST' }),
+}
+export const resourceReviewApi = {
+  list: filters => api(`/admin/resource-reviews?${new URLSearchParams(filters)}`),
+  detail: id => api(`/admin/resource-reviews/${id}`),
+  attachment: id => api(`/admin/resource-reviews/${id}/attachment`, { responseType: 'blob' }),
+  approve: (id, submissionNo) => api(`/admin/resource-reviews/${id}/approve`, { method: 'POST', body: { submissionNo } }),
+  reject: (id, submissionNo, reason) => api(`/admin/resource-reviews/${id}/reject`, { method: 'POST', body: { submissionNo, reason } }),
 }

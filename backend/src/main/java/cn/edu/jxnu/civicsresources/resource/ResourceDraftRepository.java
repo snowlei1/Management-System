@@ -12,9 +12,10 @@ import org.springframework.stereotype.Repository;
 public class ResourceDraftRepository {
     private static final String SELECT = """
         SELECT r.*,c.name AS course_name,c.status AS course_status,
-        k.name AS category_name,k.status AS category_status
+        k.name AS category_name,k.status AS category_status,u.display_name AS teacher_name
         FROM teaching_resource r JOIN course c ON c.id=r.course_id
         JOIN resource_category k ON k.id=r.category_id
+        JOIN app_user u ON u.id=r.created_by
         """;
     private final NamedParameterJdbcTemplate jdbc;
     public ResourceDraftRepository(NamedParameterJdbcTemplate jdbc) { this.jdbc = jdbc; }
@@ -25,9 +26,18 @@ public class ResourceDraftRepository {
                 .stream().findFirst();
     }
 
-    public ResourceDraftPage page(long owner, String keyword, Long course, Long category, int page, int size) {
-        StringBuilder where = new StringBuilder(" WHERE r.created_by=:owner AND r.deleted_at IS NULL AND r.status='DRAFT'");
-        MapSqlParameterSource p = new MapSqlParameterSource("owner", owner);
+    public Optional<TeachingResource> findForReview(long id, boolean lock) {
+        return jdbc.query(SELECT + " WHERE r.id=:id AND r.deleted_at IS NULL" + (lock ? " FOR UPDATE" : ""),
+                Map.of("id", id), (rs, row) -> map(rs)).stream().findFirst();
+    }
+
+    public ResourceDraftPage page(Long owner, String keyword, Long course, Long category, String status,
+            boolean review, int page, int size) {
+        StringBuilder where = new StringBuilder(" WHERE r.deleted_at IS NULL");
+        MapSqlParameterSource p = new MapSqlParameterSource();
+        if (owner != null) { where.append(" AND r.created_by=:owner"); p.addValue("owner", owner); }
+        if (review) where.append(" AND r.status IN ('PENDING','REJECTED','APPROVED') AND r.submission_no>0");
+        if (status != null && !status.isBlank()) { where.append(" AND r.status=:status"); p.addValue("status", status); }
         if (keyword != null && !keyword.isBlank()) {
             where.append(" AND r.title LIKE :keyword ESCAPE '!'");
             p.addValue("keyword", "%" + keyword.strip().replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%");
@@ -95,6 +105,18 @@ public class ResourceDraftRepository {
     public void softDelete(long id) {
         jdbc.update("UPDATE teaching_resource SET deleted_at=CURRENT_TIMESTAMP(3),updated_at=CURRENT_TIMESTAMP(3) WHERE id=:id", Map.of("id", id));
     }
+    public int submit(long id, String previousStatus) {
+        return jdbc.update("""
+                UPDATE teaching_resource SET status='PENDING',submission_no=submission_no+1,
+                updated_at=CURRENT_TIMESTAMP(3) WHERE id=:id AND status=:previous AND deleted_at IS NULL
+                """, Map.of("id", id, "previous", previousStatus));
+    }
+    public int decide(long id, long round, boolean approve) {
+        return jdbc.update("UPDATE teaching_resource SET status=:status,published_at="
+                + (approve ? "CURRENT_TIMESTAMP(3)" : "NULL")
+                + ",updated_at=CURRENT_TIMESTAMP(3) WHERE id=:id AND status='PENDING' AND submission_no=:round AND deleted_at IS NULL",
+                Map.of("id", id, "round", round, "status", approve ? "APPROVED" : "REJECTED"));
+    }
     private static MapSqlParameterSource params(ResourceDraftRequest r, StoredResourceFile file) {
         return new MapSqlParameterSource().addValue("title", r.title()).addValue("description", r.description())
                 .addValue("course", r.courseId()).addValue("category", r.categoryId()).addValue("key", file.key())
@@ -106,6 +128,8 @@ public class ResourceDraftRepository {
                 rs.getLong("category_id"), rs.getString("category_name"), rs.getString("category_status"),
                 rs.getLong("created_by"), rs.getString("status"), rs.getString("file_storage_key"),
                 rs.getString("file_original_name"), rs.getString("file_mime_type"), rs.getLong("file_size_bytes"),
-                rs.getTimestamp("created_at").toLocalDateTime(), rs.getTimestamp("updated_at").toLocalDateTime());
+                rs.getTimestamp("created_at").toLocalDateTime(), rs.getTimestamp("updated_at").toLocalDateTime(),
+                rs.getString("teacher_name"), rs.getLong("submission_no"),
+                rs.getTimestamp("published_at") == null ? null : rs.getTimestamp("published_at").toLocalDateTime());
     }
 }

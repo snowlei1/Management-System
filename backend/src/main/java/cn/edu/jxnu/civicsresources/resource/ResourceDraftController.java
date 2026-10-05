@@ -56,6 +56,10 @@ public class ResourceDraftController {
         service.delete(user, id);
         return ApiResponse.success(null);
     }
+    @PostMapping("/{id}/submit")
+    public ApiResponse<ResourceDraftView> submit(@AuthenticationPrincipal UserPrincipal user, @PathVariable long id) {
+        return ApiResponse.success(service.submit(user, id));
+    }
     private ResourceDraftRequest parse(String metadata) {
         try {
             return mapper.readerFor(ResourceDraftRequest.class)

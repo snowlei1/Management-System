@@ -135,7 +135,7 @@ try {
     $large=@{Name='large.pdf';Mime='application/pdf';Bytes=[byte[]]::new(20*1024*1024+1)}
     Status 'oversize upload' (Request $teacher POST '/teacher/resources' (CopyPayload) $large -Multipart) 413
     Status 'missing file' (Request $teacher POST '/teacher/resources' (CopyPayload) $null -Multipart) 400
-    foreach ($query in @('page=0','size=101','status=APPROVED','courseId=-1','categoryId=0')) { Status "invalid list $query" (Request $teacher GET "/teacher/resources?$query") 400 }
+    foreach ($query in @('page=0','size=101','status=PENDING_REVIEW','courseId=-1','categoryId=0')) { Status "invalid list $query" (Request $teacher GET "/teacher/resources?$query") 400 }
     $query="keyword=$([uri]::EscapeDataString($tag))&courseId=$course&categoryId=$category&status=DRAFT&size=1"
     $list=Request $teacher GET "/teacher/resources?$query";Status 'combined filter first page' $list 200;Assert 'pagination and total' ($list.Json.data.total -eq $script:resources.Count -and @($list.Json.data.items).Count -eq 1)
     $next=Request $teacher GET "/teacher/resources?$query&page=2";Status 'second page' $next 200;Assert 'different page item' ($list.Json.data.items[0].id -ne $next.Json.data.items[0].id)

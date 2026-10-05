@@ -60,6 +60,12 @@ class LocalResourceFileStorageTest {
         try (var list = Files.list(directory)) { assertEquals(0, list.count()); }
     }
     @Test void cleanupRejectsClientPath() { assertThrows(IllegalArgumentException.class, () -> storage().discard("../a.pdf")); }
+    TeachingResource resource(StoredResourceFile f) { var t=java.time.LocalDateTime.now();return new TeachingResource(1,"title",null,1,"c","ACTIVE",1,"k","ACTIVE",1,"PENDING",f.key(),f.originalName(),f.mimeType(),f.sizeBytes(),t,t,"t",1,null); }
+    @Test void verifiedReadReturnsExactBytes() {var s=storage();var f=s.save(file("a.pdf","application/pdf",pdf()));assertArrayEquals(pdf(),s.readVerified(resource(f)));}
+    @Test void missingStoredFileDenied() {assertThrows(BusinessException.class,()->storage().verify(resource(new StoredResourceFile("11111111-1111-1111-1111-111111111111.pdf","a.pdf","application/pdf",32))));}
+    @Test void unsafeStoredKeyDenied() {assertThrows(BusinessException.class,()->storage().readVerified(resource(new StoredResourceFile("../a.pdf","a.pdf","application/pdf",32))));}
+    @Test void storedSizeMismatchDenied() {var s=storage();var f=s.save(file("a.pdf","application/pdf",pdf()));assertThrows(BusinessException.class,()->s.verify(resource(new StoredResourceFile(f.key(),f.originalName(),f.mimeType(),f.sizeBytes()+1))));}
+    @Test void damagedStoredFileDenied() throws IOException {var s=storage();var f=s.save(file("a.pdf","application/pdf",pdf()));Files.write(directory.resolve(f.key()),new byte[(int)f.sizeBytes()]);assertThrows(BusinessException.class,()->s.verify(resource(f)));}
     @Test void streamSizeCannotBypassLimit() throws IOException {
         var malicious = new MockMultipartFile("file", "a.pdf", "application/pdf", new byte[1025]) { @Override public long getSize() { return 1; } };
         assertEquals(HttpStatus.PAYLOAD_TOO_LARGE, assertThrows(BusinessException.class, () -> storage().save(malicious)).status());

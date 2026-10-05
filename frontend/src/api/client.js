@@ -24,7 +24,7 @@ export function clearCsrf() {
   csrfToken = null
 }
 
-export async function api(path, { method = 'GET', body } = {}) {
+export async function api(path, { method = 'GET', body, responseType = 'json' } = {}) {
   const isMultipart = body instanceof FormData
   const headers = { Accept: 'application/json' }
   if (method !== 'GET' && method !== 'HEAD') {
@@ -38,6 +38,7 @@ export async function api(path, { method = 'GET', body } = {}) {
     credentials: 'same-origin',
     body: body === undefined ? undefined : isMultipart ? body : JSON.stringify(body),
   })
+  if (response.ok && responseType === 'blob') return response.blob()
   const result = await response.json().catch(() => null)
   if (!response.ok || result?.code !== 'OK') {
     if (response.status === 401) {

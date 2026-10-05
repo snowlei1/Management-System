@@ -88,6 +88,28 @@ public class LocalResourceFileStorage {
     }
 
     // Only server-generated flat keys are ever resolved; callers cannot supply a client path.
+    public void verify(TeachingResource resource) { readVerified(resource); }
+
+    public byte[] readVerified(TeachingResource resource) {
+        String key = resource.storageKey();
+        if (key == null || !key.matches("[a-f0-9-]{36}\\.[a-z0-9]+")) throw invalid("资源文件记录无效，请联系管理员");
+        String original = safeOriginalName(resource.originalName());
+        String ext = key.substring(key.lastIndexOf('.') + 1);
+        String originalExt = original.substring(original.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT);
+        if (!allowed.contains(ext) || !ext.equals(originalExt) || !Objects.equals(MIME.get(ext), resource.mimeType())
+                || resource.sizeBytes() <= 0 || resource.sizeBytes() > maxSize) throw invalid("资源文件记录无效");
+        Path path = root.resolve(key).normalize();
+        try {
+            if (!path.startsWith(root) || Files.isSymbolicLink(root) || !Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)
+                    || !Files.isReadable(path) || !path.toRealPath().startsWith(root.toRealPath())
+                    || Files.size(path) != resource.sizeBytes()) throw invalid("资源文件不存在、不可读或大小不一致，请重新上传");
+            validateContent(path, ext);
+            byte[] bytes = Files.readAllBytes(path);
+            if (bytes.length != resource.sizeBytes()) throw invalid("资源文件大小不一致，请重新上传");
+            return bytes;
+        } catch (IOException exception) { throw invalid("资源文件暂不可读，请稍后重试"); }
+    }
+
     public void discard(String key) {
         if (key == null || !key.matches("[a-f0-9-]{36}\\.[a-z0-9]+")) {
             throw new IllegalArgumentException("Invalid internal storage key");

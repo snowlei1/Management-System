@@ -2,7 +2,7 @@
 
 课题名称：基于SpringBoot的课程思政教学资源管理系统设计与实现。
 
-当前完成第一至三阶段：认证权限、管理员用户管理、基础数据，以及教师本人资源草稿、文件上传和编辑。审核、发布、学生资源中心、预览、下载、收藏与统计业务尚未开发，不能将当前页面视为完整系统。
+当前完成第一至四阶段：认证权限、用户与基础数据管理、教师资源建设、提交审核、驳回重提与审核发布。只实现管理员审核所需附件预览/下载；学生资源中心、公共资源使用、收藏、浏览/下载记录与统计尚未开发，不能将当前页面视为完整系统。
 
 ## 技术环境
 
@@ -79,16 +79,16 @@ pnpm dev
 
 ## 第三阶段：教师资源草稿
 
-教师菜单新增“教学资源管理 / 我的资源”。草稿允许 0..N 个思政元素；选中的元素须启用。未来提交审核时至少 1 个有效元素的规则留待第四阶段实现，不存在提交审核或发布接口。管理员和学生不能维护教师草稿，其他教师不可访问本人草稿。
+第三阶段建立教师菜单“教学资源管理 / 我的资源”。草稿允许0..N个元素；第四阶段已经落实提交时至少1个且全部有效的规则。管理员和学生不能维护教师资源，其他教师不可访问他人专属资源。
 
 | 方法与路径 | 作用（均只允许 TEACHER） |
 |---|---|
-| `GET /api/teacher/resources` | 本人DRAFT分页列表，keyword/courseId/categoryId/status筛选 |
+| `GET /api/teacher/resources` | 本人未删除四状态分页列表，keyword/courseId/categoryId/status筛选 |
 | `GET /api/teacher/resources/upload-policy` | 允许扩展名和单文件大小上限，不返回目录 |
-| `GET /api/teacher/resources/{id}` | 本人未删除草稿详情 |
+| `GET /api/teacher/resources/{id}` | 本人未删除四状态详情及审核历史 |
 | `POST /api/teacher/resources` | multipart：metadata JSON + 必传file，需CSRF |
-| `PUT /api/teacher/resources/{id}` | multipart：metadata JSON + 可选替换file，需CSRF |
-| `DELETE /api/teacher/resources/{id}` | 软删除本人DRAFT，需CSRF；保留关联和当前文件 |
+| `PUT /api/teacher/resources/{id}` | 本人DRAFT/REJECTED，multipart完整metadata + 可选file，需CSRF |
+| `DELETE /api/teacher/resources/{id}` | 本人DRAFT/REJECTED软删除，需CSRF；保留关联、历史和当前文件 |
 
 metadata仅包含 `title`、`description`、`courseId`、`categoryId`、`elementIds`；不得指定创建人、状态或服务器路径。编辑时提交完整元数据；不传file才保留原文件，传空file会被拒绝。
 
@@ -99,3 +99,20 @@ metadata仅包含 `title`、`description`、`courseId`、`categoryId`、`element
 真实第三阶段记录见 [`docs/12-教学资源草稿与文件上传实现记录.md`](docs/12-教学资源草稿与文件上传实现记录.md)。运行 `./scripts/test-stage3.ps1` 做真实HTTP测试；`-KeepFixtures` 可保留启用基础数据供浏览器验证，资源测试条目仍会软删除。脚本经管理员接口创建第二教师 `dev_teacher_b`，本地测试密码 `TeacherBDev#2026`（不是dev-seed初始化账号）；仅用于本机权限测试，不用于正式部署。
 
 后端默认单元测试不依赖MySQL；真实事务测试需已初始化本机开发库，在backend目录先设置进程环境变量 `STAGE3_MYSQL_TEST=true` 再运行 `mvn test`。事务测试受控注入写关联后的异常，核验真实数据库回滚和文件补偿；正常提交的测试条目按软删除策略保留。上传目录、tmp测试附件及本地连接配置不提交Git。
+
+## 第四阶段：提交审核与发布
+
+| 方法与路径 | 行为与权限 |
+|---|---|
+| POST /api/teacher/resources/{id}/submit | TEACHER本人草稿/驳回，需CSRF；全量重新校验，成功后PENDING且轮次+1 |
+| GET /api/admin/resource-reviews | ADMIN；默认PENDING，可筛选PENDING/REJECTED/APPROVED/ALL，关键词、课程、分类、教师及分页 |
+| GET /api/admin/resource-reviews/{id} | ADMIN已提交三状态详情与历史；草稿404 |
+| GET /api/admin/resource-reviews/{id}/attachment | ADMIN审核材料；PDF/图片可inline，Office或download=true为attachment；不记下载事件 |
+| POST /api/admin/resource-reviews/{id}/approve | ADMIN+CSRF，JSON {submissionNo}，通过并发布 |
+| POST /api/admin/resource-reviews/{id}/reject | ADMIN+CSRF，JSON {submissionNo,reason}，原因1—1000字符 |
+
+仅DRAFT/REJECTED可编辑/提交；PENDING/APPROVED教师写操作409。审核FOR UPDATE锁定资源，并核对PENDING及页面轮次；竞争请求/旧轮次页面409。审核历史与状态在同一事务提交，APPROVED才有published_at。管理员可追溯已驳回/通过资源，但不能编辑正文或看从未提交草稿。附件目录不公开；PDF.js 4.10.38仅用于审核页显示授权材料，不更改安全响应头。
+
+真实记录见 [`docs/13-教学资源审核与发布实现记录.md`](docs/13-教学资源审核与发布实现记录.md)。运行 `./scripts/test-stage4.ps1`；-KeepFixtures保留启用基础数据供浏览器验证，批准的测试资源因本轮没有下架接口而留存，草稿/驳回测试资源软删除。后端设置 `STAGE4_MYSQL_TEST=true` 可执行8项真实MySQL测试（包括双管理员HTTP竞争和事务故障注入）；同时设置STAGE3_MYSQL_TEST可回归上传补偿。
+
+MySQL并发测试仅在本地库准备 `dev_admin_b`，复制dev_admin的BCrypt散列用于第二管理员独立Session（默认开发密码同AdminDev#2026）。不增加管理员创建业务API，不在Java源码硬编码正式密码；可用STAGE4_ADMIN_PASSWORD覆盖测试登录密码。所有固定开发账号、root连接和公开测试密码禁止用于正式部署。审核历史追溯结论，不保存每轮附件快照；已发布版本管理另行设计。
