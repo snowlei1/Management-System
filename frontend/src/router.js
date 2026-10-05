@@ -13,6 +13,7 @@ import ResourceReviewListView from './views/ResourceReviewListView.vue'
 import ResourceReviewDetailView from './views/ResourceReviewDetailView.vue'
 import PublishedResourceListView from './views/PublishedResourceListView.vue'
 import PublishedResourceDetailView from './views/PublishedResourceDetailView.vue'
+import StatisticsView from './views/StatisticsView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -30,6 +31,7 @@ const router = createRouter({
         { path: 'my-resources/:id/edit', name: 'resource-edit', component: ResourceDraftFormView, meta: { role: 'TEACHER' } },
         { path: 'my-resources/:id', name: 'resource-detail', component: ResourceDraftDetailView, meta: { role: 'TEACHER' } },
         { path: 'users', name: 'users', component: UserManagementView, meta: { role: 'ADMIN' } },
+        { path: 'statistics', name: 'statistics', component: StatisticsView, meta: { role: 'ADMIN' } },
         { path: 'resource-reviews', name: 'resource-reviews', component: ResourceReviewListView, meta: { role: 'ADMIN' } },
         { path: 'resource-reviews/:id', name: 'resource-review-detail', component: ResourceReviewDetailView, meta: { role: 'ADMIN' } },
         { path: 'courses', name: 'courses', component: BaseDataManagementView, props: { kind: 'courses' }, meta: { role: 'ADMIN' } },
