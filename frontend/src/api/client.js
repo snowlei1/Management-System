@@ -25,17 +25,18 @@ export function clearCsrf() {
 }
 
 export async function api(path, { method = 'GET', body } = {}) {
+  const isMultipart = body instanceof FormData
   const headers = { Accept: 'application/json' }
   if (method !== 'GET' && method !== 'HEAD') {
     await ensureCsrf()
     headers[csrfHeader] = csrfToken
   }
-  if (body !== undefined) headers['Content-Type'] = 'application/json'
+  if (body !== undefined && !isMultipart) headers['Content-Type'] = 'application/json'
   const response = await fetch(`/api${path}`, {
     method,
     headers,
     credentials: 'same-origin',
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: body === undefined ? undefined : isMultipart ? body : JSON.stringify(body),
   })
   const result = await response.json().catch(() => null)
   if (!response.ok || result?.code !== 'OK') {

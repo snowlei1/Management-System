@@ -10,3 +10,5 @@ frontend/dist/
 *.log
 tmp/
 backend/config/application-local.yml
+backend/uploads/
+uploads/

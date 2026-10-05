@@ -6,6 +6,9 @@ import HomeView from './views/HomeView.vue'
 import ProfileView from './views/ProfileView.vue'
 import UserManagementView from './views/UserManagementView.vue'
 import BaseDataManagementView from './views/BaseDataManagementView.vue'
+import ResourceDraftListView from './views/ResourceDraftListView.vue'
+import ResourceDraftFormView from './views/ResourceDraftFormView.vue'
+import ResourceDraftDetailView from './views/ResourceDraftDetailView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -15,6 +18,10 @@ const router = createRouter({
       path: '/', component: AppLayout, children: [
         { path: '', name: 'home', component: HomeView },
         { path: 'profile', name: 'profile', component: ProfileView },
+        { path: 'my-resources', name: 'my-resources', component: ResourceDraftListView, meta: { role: 'TEACHER' } },
+        { path: 'my-resources/new', name: 'resource-create', component: ResourceDraftFormView, meta: { role: 'TEACHER' } },
+        { path: 'my-resources/:id/edit', name: 'resource-edit', component: ResourceDraftFormView, meta: { role: 'TEACHER' } },
+        { path: 'my-resources/:id', name: 'resource-detail', component: ResourceDraftDetailView, meta: { role: 'TEACHER' } },
         { path: 'users', name: 'users', component: UserManagementView, meta: { role: 'ADMIN' } },
         { path: 'courses', name: 'courses', component: BaseDataManagementView, props: { kind: 'courses' }, meta: { role: 'ADMIN' } },
         { path: 'ideological-elements', name: 'ideological-elements', component: BaseDataManagementView, props: { kind: 'ideological-elements' }, meta: { role: 'ADMIN' } },

@@ -1,0 +1,66 @@
+<script setup>
+import { computed, onMounted, reactive, ref } from 'vue'
+import { resourceDraftApi } from '../api/resources.js'
+import { getCourseOptions, getResourceCategoryOptions } from '../api/baseData.js'
+
+const filters = reactive({ keyword: '', courseId: '', categoryId: '', status: '' })
+const courses = ref([]), categories = ref([]), items = ref([])
+const page = ref(1), total = ref(0), loading = ref(false), deleting = ref(false)
+const error = ref(''), notice = ref(''), target = ref(null)
+const size = 10
+const pages = computed(() => Math.max(1, Math.ceil(total.value / size)))
+let sequence = 0
+async function load() {
+  const current = ++sequence
+  loading.value = true; error.value = ''
+  try {
+    const params = { page: page.value, size }
+    for (const [key, value] of Object.entries(filters)) if (String(value).trim()) params[key] = String(value).trim()
+    const result = await resourceDraftApi.list(params)
+    if (current !== sequence) return
+    items.value = result.items; total.value = result.total
+    if (page.value > pages.value) { page.value = pages.value; await load() }
+  } catch (e) { if (current === sequence) error.value = e.message }
+  finally { if (current === sequence) loading.value = false }
+}
+function search() { page.value = 1; load() }
+function changePage(next) { if (next >= 1 && next <= pages.value) { page.value = next; load() } }
+async function remove() {
+  if (deleting.value || !target.value) return
+  deleting.value = true; error.value = ''
+  try {
+    await resourceDraftApi.remove(target.value.id)
+    target.value = null; notice.value = '草稿已软删除，记录及关联保留。'
+    await load()
+  } catch (e) { error.value = e.message }
+  finally { deleting.value = false }
+}
+onMounted(async () => {
+  try { [courses.value, categories.value] = await Promise.all([getCourseOptions(), getResourceCategoryOptions()]) }
+  catch (e) { error.value = e.message }
+  await load()
+})
+</script>
+
+<template>
+  <section class="page-heading heading-row">
+    <div><p class="eyebrow">教学资源管理</p><h1>我的资源</h1><p class="muted">仅显示本人未删除的草稿；当前未开放提交审核和资源发布。</p></div>
+    <RouterLink class="primary" to="/my-resources/new">新建资源</RouterLink>
+  </section>
+  <section class="card">
+    <form class="filter-row" @submit.prevent="search">
+      <div><label for="resource-keyword">资源标题</label><input id="resource-keyword" v-model="filters.keyword" maxlength="200" placeholder="输入关键词" /></div>
+      <div><label for="resource-course-filter">课程</label><select id="resource-course-filter" v-model="filters.courseId"><option value="">全部课程</option><option v-for="c in courses" :key="c.id" :value="c.id">{{ c.name }}</option></select></div>
+      <div><label for="resource-category-filter">分类</label><select id="resource-category-filter" v-model="filters.categoryId"><option value="">全部分类</option><option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option></select></div>
+      <div><label for="resource-status-filter">状态</label><select id="resource-status-filter" v-model="filters.status"><option value="">全部可见状态</option><option value="DRAFT">草稿</option></select></div>
+      <button class="secondary" type="submit" :disabled="loading">查询</button>
+    </form>
+    <p v-if="error" class="message error" role="alert">{{ error }}</p><p v-if="notice" class="message success" role="status">{{ notice }}</p>
+    <div class="table-wrap"><table><thead><tr><th>资源名称</th><th>课程</th><th>分类</th><th>思政元素</th><th>状态</th><th>更新时间</th><th>操作</th></tr></thead><tbody>
+      <tr v-for="r in items" :key="r.id"><td class="base-name">{{ r.title }}</td><td>{{ r.courseName }}</td><td>{{ r.categoryName }}</td><td class="base-name">{{ r.elements.map(e => e.name).join('、') || '尚未标注' }}</td><td><span class="badge badge-disabled">草稿</span></td><td>{{ r.updatedAt?.replace('T', ' ').slice(0, 19) }}</td><td class="actions"><RouterLink class="link-button" :to="`/my-resources/${r.id}`">详情</RouterLink><RouterLink class="link-button" :to="`/my-resources/${r.id}/edit`">编辑</RouterLink><button class="link-button" type="button" @click="target = r; error = ''">删除</button></td></tr>
+      <tr v-if="loading"><td colspan="7" class="empty">正在加载…</td></tr><tr v-else-if="!items.length"><td colspan="7" class="empty">暂无符合条件的草稿</td></tr>
+    </tbody></table></div>
+    <div class="pagination"><span>共 {{ total }} 条 · 第 {{ page }} / {{ pages }} 页</span><div><button class="secondary" :disabled="page <= 1 || loading" @click="changePage(page - 1)">上一页</button><button class="secondary" :disabled="page >= pages || loading" @click="changePage(page + 1)">下一页</button></div></div>
+  </section>
+  <div v-if="target" class="modal-backdrop" @click.self="!deleting && (target = null)"><section class="modal-card confirm-card" role="dialog" aria-modal="true" aria-label="确认删除草稿"><h2>确认删除草稿</h2><p>“{{ target.title }}”将从本人列表移除。数据库记录、思政元素关联与当前文件保留，不执行物理删除。</p><p v-if="error" class="message error" role="alert">{{ error }}</p><div class="modal-actions"><button class="secondary" :disabled="deleting" @click="target = null">取消</button><button class="primary" :disabled="deleting" @click="remove">{{ deleting ? '提交中…' : '确认删除' }}</button></div></section></div>
+</template>

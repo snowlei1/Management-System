@@ -119,6 +119,18 @@ td.actions { white-space: nowrap; }
 .confirm-card { max-width: 430px; }
 .confirm-card p { color: #65798b; line-height: 1.7; }
 
+.resource-form-card, .resource-detail-card { max-width: 900px; }
+.resource-fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.resource-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+.element-picker { border: 1px solid #dce5ec; border-radius: 8px; margin: 22px 0; padding: 12px 16px; }
+.element-picker legend { color: #3b5268; font-size: 14px; }
+.checkbox-label { display: inline-flex; align-items: center; gap: 8px; margin: 8px 22px 8px 0; font-weight: normal; }
+.checkbox-label input { width: 17px; min-height: 17px; }
+.resource-details { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 16px; margin: 25px 0; font-size: 14px; line-height: 1.7; }
+.resource-details dt { color: #718496; }
+.resource-details dd { margin: 0; overflow-wrap: anywhere; }
+.preserve-lines { white-space: pre-wrap; }
+
 @media (max-width: 760px) {
   .app-shell { display: block; }
   .sidebar { width: auto; padding: 14px; }

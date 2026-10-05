@@ -12,6 +12,10 @@ spring:
     import: optional:file:./config/application-local.yml
   application:
     name: civics-resource-management
+  servlet:
+    multipart:
+      max-file-size: ${RESOURCE_MAX_FILE_SIZE:20MB}
+      max-request-size: ${RESOURCE_MAX_REQUEST_SIZE:21MB}
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: ${DB_URL:jdbc:mysql://127.0.0.1:3306/management-system?useUnicode=true&characterEncoding=utf8}
@@ -20,3 +24,9 @@ spring:
     hikari:
       connection-timeout: 3000
       maximum-pool-size: 5
+
+app:
+  resource-storage:
+    directory: ${RESOURCE_STORAGE_DIR:./uploads/resources}
+    max-size: ${RESOURCE_MAX_FILE_SIZE:20MB}
+    allowed-extensions: pdf,doc,docx,ppt,pptx,xls,xlsx,jpg,jpeg,png

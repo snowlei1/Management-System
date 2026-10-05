@@ -2,7 +2,7 @@
 
 课题名称：基于SpringBoot的课程思政教学资源管理系统设计与实现。
 
-当前完成第一、二阶段：认证权限、管理员用户管理、基础前端框架，以及课程、课程思政元素和资源分类管理。教学资源、上传、审核、收藏、下载与统计业务尚未开发，不能将本阶段页面视为完整系统。
+当前完成第一至三阶段：认证权限、管理员用户管理、基础数据，以及教师本人资源草稿、文件上传和编辑。审核、发布、学生资源中心、预览、下载、收藏与统计业务尚未开发，不能将当前页面视为完整系统。
 
 ## 技术环境
 
@@ -76,3 +76,26 @@ pnpm dev
 后端单元测试：在 `backend/` 执行 `mvn test`。前端构建：在 `frontend/` 执行 `pnpm build`。本机真实数据库、HTTP 与浏览器操作结果见 [`docs/10-认证权限与用户管理实现记录.md`](docs/10-认证权限与用户管理实现记录.md)。原设计基线保存在 [`docs/`](docs/01-需求分析.md)，本轮没有改动任务书和开题报告。
 
 第二阶段真实结果见 [`docs/11-课程思政元素与资源分类实现记录.md`](docs/11-课程思政元素与资源分类实现记录.md)。本机前后端运行且初始化开发账号后，在项目根目录执行 `./scripts/test-stage2.ps1`；脚本默认走 5173 的前端代理，亦可通过 `-BaseUrl http://127.0.0.1:8080` 直接验证后端。测试只创建带随机标识的本地条目，结束或失败时在 `finally` 中停用保留，不物理删除。测试账号密码可由 `STAGE2_ADMIN_PASSWORD`、`STAGE2_TEACHER_PASSWORD`、`STAGE2_STUDENT_PASSWORD` 提供；默认值仅适用于本地开发种子账号。
+
+## 第三阶段：教师资源草稿
+
+教师菜单新增“教学资源管理 / 我的资源”。草稿允许 0..N 个思政元素；选中的元素须启用。未来提交审核时至少 1 个有效元素的规则留待第四阶段实现，不存在提交审核或发布接口。管理员和学生不能维护教师草稿，其他教师不可访问本人草稿。
+
+| 方法与路径 | 作用（均只允许 TEACHER） |
+|---|---|
+| `GET /api/teacher/resources` | 本人DRAFT分页列表，keyword/courseId/categoryId/status筛选 |
+| `GET /api/teacher/resources/upload-policy` | 允许扩展名和单文件大小上限，不返回目录 |
+| `GET /api/teacher/resources/{id}` | 本人未删除草稿详情 |
+| `POST /api/teacher/resources` | multipart：metadata JSON + 必传file，需CSRF |
+| `PUT /api/teacher/resources/{id}` | multipart：metadata JSON + 可选替换file，需CSRF |
+| `DELETE /api/teacher/resources/{id}` | 软删除本人DRAFT，需CSRF；保留关联和当前文件 |
+
+metadata仅包含 `title`、`description`、`courseId`、`categoryId`、`elementIds`；不得指定创建人、状态或服务器路径。编辑时提交完整元数据；不传file才保留原文件，传空file会被拒绝。
+
+在backend工作目录启动时，默认受控目录为 `backend/uploads/resources`。用 `RESOURCE_STORAGE_DIR` 指定其他项目专属目录，保持备份和读写权限；不要映射为静态公开目录。单文件20 MiB，multipart请求21 MiB；`RESOURCE_MAX_FILE_SIZE` 同时覆盖服务层与Servlet的文件上限，调整时应相应设置 `RESOURCE_MAX_REQUEST_SIZE`。白名单为PDF、DOC/DOCX、PPT/PPTX、XLS/XLSX、JPG/JPEG、PNG，集中在 `app.resource-storage.allowed-extensions`。响应不含存储键或绝对路径。
+
+扩展名、Content-Type、大小及基本签名/Office容器结构检查不是病毒扫描或完整文档解析。当前不支持宏OOXML、加密OOXML或视频；旧Office文档只检查复合文件头和相应流名。浏览器若不能识别类型，应正确导出文件，不要把不明二进制强行作为文档上传。
+
+真实第三阶段记录见 [`docs/12-教学资源草稿与文件上传实现记录.md`](docs/12-教学资源草稿与文件上传实现记录.md)。运行 `./scripts/test-stage3.ps1` 做真实HTTP测试；`-KeepFixtures` 可保留启用基础数据供浏览器验证，资源测试条目仍会软删除。脚本经管理员接口创建第二教师 `dev_teacher_b`，本地测试密码 `TeacherBDev#2026`（不是dev-seed初始化账号）；仅用于本机权限测试，不用于正式部署。
+
+后端默认单元测试不依赖MySQL；真实事务测试需已初始化本机开发库，在backend目录先设置进程环境变量 `STAGE3_MYSQL_TEST=true` 再运行 `mvn test`。事务测试受控注入写关联后的异常，核验真实数据库回滚和文件补偿；正常提交的测试条目按软删除策略保留。上传目录、tmp测试附件及本地连接配置不提交Git。

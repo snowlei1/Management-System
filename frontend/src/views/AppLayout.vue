@@ -37,6 +37,10 @@ async function signOut() {
           <RouterLink to="/resource-categories" active-class="active">资源分类管理</RouterLink>
         </div>
         <RouterLink to="/profile" active-class="active">个人信息</RouterLink>
+        <div v-if="authState.user?.role === 'TEACHER'" class="nav-group">
+          <span class="nav-group-title">教学资源管理</span>
+          <RouterLink to="/my-resources" active-class="active">我的资源</RouterLink>
+        </div>
       </nav>
       <p class="sidebar-note">当前阶段仅开放已实现功能</p>
     </aside>
