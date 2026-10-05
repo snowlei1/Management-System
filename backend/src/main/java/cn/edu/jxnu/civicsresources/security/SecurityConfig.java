@@ -59,6 +59,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/csrf", "/api/auth/login").permitAll()
                         .requestMatchers("/api/teacher/resources", "/api/teacher/resources/**").hasRole("TEACHER")
                         .requestMatchers("/api/admin/resource-reviews", "/api/admin/resource-reviews/**").hasRole("ADMIN")
+                        .requestMatchers("/api/resources", "/api/resources/**", "/api/favorites", "/api/favorites/**").hasAnyRole("TEACHER", "STUDENT")
                         .requestMatchers("/api/users", "/api/users/**").hasRole("ADMIN")
                         .requestMatchers("/api/courses", "/api/courses/**",
                                 "/api/ideological-elements", "/api/ideological-elements/**",

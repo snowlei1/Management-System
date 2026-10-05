@@ -3,7 +3,7 @@ import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist'
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 GlobalWorkerOptions.workerSrc = workerUrl
-const props = defineProps({ src: { type: String, required: true } })
+const props = defineProps({ src: { type: String, required: true }, label: { type: String, default: '审核附件' } })
 const canvas = ref(null), page = ref(1), pages = ref(0), busy = ref(false), error = ref('')
 let document = null, loadingTask = null, renderTask = null, generation = 0
 function release() { generation++; renderTask?.cancel(); renderTask = null; loadingTask?.destroy().catch(() => {}); loadingTask = null; document = null; busy.value = false }
@@ -37,7 +37,7 @@ onBeforeUnmount(release)
 </script>
 <template>
   <div class="pdf-review"><p v-if="error" class="message error" role="alert">{{ error }}</p><p v-if="!pages && !error" class="muted">正在解析PDF…</p>
-    <div v-if="pages" class="pagination"><span>审核附件 · 第 {{ page }} / {{ pages }} 页</span><div><button class="secondary" :disabled="busy || page <= 1" @click="render(page - 1)">上一页</button><button class="secondary" :disabled="busy || page >= pages" @click="render(page + 1)">下一页</button></div></div>
-    <canvas ref="canvas" class="pdf-review-canvas" aria-label="PDF审核材料内容" />
+    <div v-if="pages" class="pagination"><span>{{ label }} · 第 {{ page }} / {{ pages }} 页</span><div><button class="secondary" :disabled="busy || page <= 1" @click="render(page - 1)">上一页</button><button class="secondary" :disabled="busy || page >= pages" @click="render(page + 1)">下一页</button></div></div>
+    <canvas ref="canvas" class="pdf-review-canvas" :aria-label="`${label}PDF内容`" />
   </div>
 </template>

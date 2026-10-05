@@ -11,6 +11,8 @@ import ResourceDraftFormView from './views/ResourceDraftFormView.vue'
 import ResourceDraftDetailView from './views/ResourceDraftDetailView.vue'
 import ResourceReviewListView from './views/ResourceReviewListView.vue'
 import ResourceReviewDetailView from './views/ResourceReviewDetailView.vue'
+import PublishedResourceListView from './views/PublishedResourceListView.vue'
+import PublishedResourceDetailView from './views/PublishedResourceDetailView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -20,6 +22,9 @@ const router = createRouter({
       path: '/', component: AppLayout, children: [
         { path: '', name: 'home', component: HomeView },
         { path: 'profile', name: 'profile', component: ProfileView },
+        { path: 'resources', name: 'resources', component: PublishedResourceListView, meta: { roles: ['TEACHER', 'STUDENT'] } },
+        { path: 'resources/:id', name: 'published-resource-detail', component: PublishedResourceDetailView, meta: { roles: ['TEACHER', 'STUDENT'] } },
+        { path: 'favorites', name: 'favorites', component: PublishedResourceListView, props: { favoritesOnly: true }, meta: { roles: ['TEACHER', 'STUDENT'] } },
         { path: 'my-resources', name: 'my-resources', component: ResourceDraftListView, meta: { role: 'TEACHER' } },
         { path: 'my-resources/new', name: 'resource-create', component: ResourceDraftFormView, meta: { role: 'TEACHER' } },
         { path: 'my-resources/:id/edit', name: 'resource-edit', component: ResourceDraftFormView, meta: { role: 'TEACHER' } },
@@ -46,6 +51,7 @@ router.beforeEach(async (to) => {
   if (to.meta.public) return authState.user ? { name: 'home' } : true
   if (!authState.user) return { name: 'login', query: { redirect: to.fullPath } }
   if (to.meta.role && authState.user.role !== to.meta.role) return { name: 'home' }
+  if (to.meta.roles && !to.meta.roles.includes(authState.user.role)) return { name: 'home' }
   return true
 })
 

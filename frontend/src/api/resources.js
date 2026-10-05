@@ -22,3 +22,11 @@ export const resourceReviewApi = {
   approve: (id, submissionNo) => api(`/admin/resource-reviews/${id}/approve`, { method: 'POST', body: { submissionNo } }),
   reject: (id, submissionNo, reason) => api(`/admin/resource-reviews/${id}/reject`, { method: 'POST', body: { submissionNo, reason } }),
 }
+export const publishedResourceApi = {
+  list: filters => api(`/resources?${new URLSearchParams(filters)}`),
+  favorites: filters => api(`/favorites?${new URLSearchParams(filters)}`),
+  detail: id => api(`/resources/${id}`),
+  preview: id => api(`/resources/${id}/preview`, { responseType: 'blob' }),
+  download: id => api(`/resources/${id}/download`, { responseType: 'blob' }),
+  favorite: (id, active) => api(`/resources/${id}/favorite`, { method: active ? 'POST' : 'DELETE' }),
+}

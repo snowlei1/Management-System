@@ -56,7 +56,7 @@ public class ResourceDraftRepository {
         return elementsFor(List.of(resourceId)).getOrDefault(resourceId, List.of());
     }
 
-    private Map<Long, List<ResourceElementView>> elementsFor(List<Long> ids) {
+    Map<Long, List<ResourceElementView>> elementsFor(List<Long> ids) {
         Map<Long, List<ResourceElementView>> result = new HashMap<>();
         if (ids.isEmpty()) return result;
         jdbc.query("""
@@ -122,7 +122,7 @@ public class ResourceDraftRepository {
                 .addValue("course", r.courseId()).addValue("category", r.categoryId()).addValue("key", file.key())
                 .addValue("original", file.originalName()).addValue("mime", file.mimeType()).addValue("bytes", file.sizeBytes());
     }
-    private static TeachingResource map(ResultSet rs) throws SQLException {
+    static TeachingResource map(ResultSet rs) throws SQLException {
         return new TeachingResource(rs.getLong("id"), rs.getString("title"), rs.getString("description"),
                 rs.getLong("course_id"), rs.getString("course_name"), rs.getString("course_status"),
                 rs.getLong("category_id"), rs.getString("category_name"), rs.getString("category_status"),

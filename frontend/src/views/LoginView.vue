@@ -41,7 +41,7 @@ async function submit() {
         <p v-if="error" class="message error" role="alert">{{ error }}</p>
         <button class="primary full" type="submit" :disabled="busy">{{ busy ? '正在登录…' : '登录' }}</button>
       </form>
-      <p class="login-foot">当前已开放认证、用户、基础数据、资源建设与审核发布；学生资源中心暂未开放。</p>
+      <p class="login-foot">当前已开放资源中心与我的收藏；学生只使用已发布资源，不开放上传或审核。</p>
     </section>
   </main>
 </template>

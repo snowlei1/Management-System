@@ -2,7 +2,7 @@
 
 课题名称：基于SpringBoot的课程思政教学资源管理系统设计与实现。
 
-当前完成第一至四阶段：认证权限、用户与基础数据管理、教师资源建设、提交审核、驳回重提与审核发布。只实现管理员审核所需附件预览/下载；学生资源中心、公共资源使用、收藏、浏览/下载记录与统计尚未开发，不能将当前页面视为完整系统。
+当前完成第一至五阶段：认证权限、用户与基础数据管理、教师资源建设、提交审核、驳回重提与审核发布，以及教师/学生已发布资源中心、预览、下载、收藏和使用记录。统计仪表盘、发布后修改、撤回、下架与版本管理尚未实现，不能将当前页面视为完整系统。
 
 ## 技术环境
 
@@ -116,3 +116,25 @@ metadata仅包含 `title`、`description`、`courseId`、`categoryId`、`element
 真实记录见 [`docs/13-教学资源审核与发布实现记录.md`](docs/13-教学资源审核与发布实现记录.md)。运行 `./scripts/test-stage4.ps1`；-KeepFixtures保留启用基础数据供浏览器验证，批准的测试资源因本轮没有下架接口而留存，草稿/驳回测试资源软删除。后端设置 `STAGE4_MYSQL_TEST=true` 可执行8项真实MySQL测试（包括双管理员HTTP竞争和事务故障注入）；同时设置STAGE3_MYSQL_TEST可回归上传补偿。
 
 MySQL并发测试仅在本地库准备 `dev_admin_b`，复制dev_admin的BCrypt散列用于第二管理员独立Session（默认开发密码同AdminDev#2026）。不增加管理员创建业务API，不在Java源码硬编码正式密码；可用STAGE4_ADMIN_PASSWORD覆盖测试登录密码。所有固定开发账号、root连接和公开测试密码禁止用于正式部署。审核历史追溯结论，不保存每轮附件快照；已发布版本管理另行设计。
+
+## 第五阶段：资源中心与使用记录
+
+教师/学生的“资源中心”与教师“我的资源”生命周期管理分开。ADMIN仍使用独立审核入口，不能调用普通资源使用API。可见性统一为 `status='APPROVED' AND deleted_at IS NULL AND published_at IS NOT NULL`，包括我的收藏，不靠页面隐藏进行安全控制。
+
+| 方法与路径 | 行为（仅TEACHER/STUDENT） |
+|---|---|
+| GET /api/resources | keyword匹配标题/简介，courseId/categoryId/elementId组合筛选；page/size分页；发布时间及ID降序 |
+| GET /api/resources/{id} | 公开详情，每次成功GET记1条浏览事件，HEAD不记 |
+| GET /api/resources/{id}/preview | 重新校验可见性与文件；PDF/PNG/JPEG预览，不计浏览/下载 |
+| GET /api/resources/{id}/download | 授权校验文件后返回附件，准备响应时记下载请求事件，HEAD不记 |
+| POST /api/resources/{id}/favorite | 需CSRF，幂等收藏；Session用户/资源唯一关系 |
+| DELETE /api/resources/{id}/favorite | 需CSRF，幂等取消，保留active=FALSE关系 |
+| GET /api/favorites | 本人当前有效且仍公开资源，基本分页 |
+
+PDF使用本地PDF.js worker、图片授权Blob；Office只给下载提示，不引入第三方在线转换。下载链接始终指向受保护API，MIME/UTF-8中文名、安全头由后端返回。普通VO不含storage key或审核内部字段。浏览事件不是独立访问人数；下载事件不保证客户端完整接收。管理员审核附件不计普通使用事件。
+
+真实记录见 [`docs/14-资源中心与使用记录实现记录.md`](docs/14-资源中心与使用记录实现记录.md)。运行前启动本机MySQL、后端及前端，在根目录执行 `./scripts/test-stage5.ps1`。脚本读取不跟踪的本地配置核对事件；开发账号可由STAGE5_ADMIN_PASSWORD、STAGE5_TEACHER_PASSWORD、STAGE5_STUDENT_PASSWORD及STAGE5_OTHER_TEACHER_PASSWORD覆盖（第二教师须先按第三阶段说明准备）。所有测试仅在本地开发库运行。
+
+脚本默认结束时停用基础数据，草稿/驳回软删除，已通过/待审核夹具保留；`-KeepFixtures`保持基础数据启用以供浏览器操作。软删除隔离和缺文件场景只对带随机标签的测试夹具执行SQL/临时文件移动，finally恢复文件，不新增下架API。上传文件、真实落盘下载、构建产物和本地配置不提交Git。
+
+后端需同时设置 `STAGE3_MYSQL_TEST=true`、`STAGE4_MYSQL_TEST=true`、`STAGE5_MYSQL_TEST=true`后执行 `mvn test`，才能跑全量172项（含20项真实MySQL）。不设置时真实数据库测试会跳过，不能当作全量通过。第五阶段沿用11张表，没有新字段或索引；现有索引和EXPLAIN的排序限制均在docs/14记录。
