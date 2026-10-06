@@ -61,7 +61,7 @@ async function decide() {
     <div v-if="resource.status === 'PENDING'" class="modal-actions"><button class="secondary" @click="confirm('reject')">驳回</button><button class="primary" @click="confirm('approve')">审核通过</button></div>
     <p v-else class="field-hint">当前资源不处于待审核状态，不允许重复审核。</p>
   </aside></div>
-  <section v-if="resource" class="card review-history-panel"><AuditHistory :records="resource.auditRecords" /></section>
+  <section v-if="resource" class="review-history-panel"><AuditHistory :records="resource.auditRecords" :pending-submission-no="resource.status==='PENDING'?resource.submissionNo:0" :pending-submitted-at="resource.pendingSubmittedAt" /></section>
   <div v-if="action" class="modal-backdrop" @click.self="!busy && (action = '')"><section class="modal-card" role="dialog" aria-modal="true" :aria-label="action === 'approve' ? '确认审核通过' : '确认审核驳回'">
     <h2>{{ action === 'approve' ? '确认审核通过' : '确认审核驳回' }}</h2><p>{{ action === 'approve' ? '审核通过后资源将进入已发布状态，本阶段不能直接编辑已发布内容。' : '请填写具体原因，供教师修改后重新提交。' }}</p>
     <form @submit.prevent="decide"><template v-if="action === 'reject'"><label for="review-reason">驳回原因</label><textarea id="review-reason" v-model="reason" maxlength="1000" rows="5" required /></template><p v-if="error" class="message error" role="alert">{{ error }}</p><div class="modal-actions"><button type="button" class="secondary" :disabled="busy" @click="action = ''">取消</button><button class="primary" :disabled="busy">{{ busy ? '处理中…' : action === 'approve' ? '确认通过并发布' : '确认驳回' }}</button></div></form>
