@@ -30,10 +30,17 @@ async function submit() {
 
 <template>
   <main class="login-page">
-    <section class="login-intro"><div class="brand-mark"><AppIcon name="school" :size="28" /></div><p class="eyebrow">课程 · 资源 · 思政育人</p><h1>让教学资源有序组织，<br />让课程思政融入教学。</h1><p>围绕课程与思政元素汇聚教学材料，支持资源建设、规范审核与系统内部共享使用。</p><div class="login-feature"><AppIcon name="course" />按课程组织，按思政元素检索</div><div class="login-feature"><AppIcon name="audit" />教师建设 · 管理员审核 · 学生使用</div><div class="login-feature"><AppIcon name="file" />在线预览、收藏与下载记录</div></section>
+    <section class="login-intro">
+      <div class="brand-mark"><AppIcon name="school" :size="28" /></div>
+      <p class="eyebrow">课程 · 资源 · 思政育人</p>
+      <h1>课程思政<br />教学资源管理系统</h1>
+      <p>面向课程资源建设、审核共享与思政元素组织的教学资源平台</p>
+      <div class="login-art" aria-hidden="true"><AppIcon name="course" :size="88" /><AppIcon name="school" :size="72" /><AppIcon name="file" :size="46" /></div>
+      <div class="login-caption">教师建设 / 管理员审核 / 学生使用</div>
+    </section>
     <section class="login-card">
       <div class="brand-mark">思政</div>
-      <p class="eyebrow">课程思政教学资源管理系统</p>
+      <p class="eyebrow">教学资源平台</p>
       <h1>登录系统</h1>
       <p class="muted">请使用管理员、教师或学生账号登录。</p>
       <form @submit.prevent="submit">
@@ -44,7 +51,7 @@ async function submit() {
         <p v-if="error" class="message error" role="alert">{{ error }}</p>
         <button class="primary full" type="submit" :disabled="busy">{{ busy ? '正在登录…' : '登录' }}</button>
       </form>
-      <p class="login-foot">当前已开放资源中心与我的收藏；学生只使用已发布资源，不开放上传或审核。</p>
+      <p class="login-foot">系统内部共享使用。学生仅可查阅已发布资源，不开放上传或审核。</p>
     </section>
   </main>
 </template>
