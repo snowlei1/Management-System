@@ -45,7 +45,10 @@ export async function api(path, { method = 'GET', body, responseType = 'json' } 
       clearCsrf()
       window.dispatchEvent(new Event('auth-expired'))
     }
-    throw new ApiError(response.status, result?.code || 'REQUEST_FAILED', result?.message || '请求失败')
+    const message = result?.message || '请求失败'
+    if (!(path === '/auth/me' && response.status === 401)) window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'error', message } }))
+    throw new ApiError(response.status, result?.code || 'REQUEST_FAILED', message)
   }
+  if (!['GET', 'HEAD'].includes(method) && !path.startsWith('/auth/')) window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'success', message: '操作已完成' } }))
   return result.data
 }

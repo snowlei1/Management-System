@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { login } from '../auth/state.js'
+import AppIcon from '../components/AppIcon.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -11,6 +12,7 @@ const busy = ref(false)
 const error = ref('')
 
 async function submit() {
+  if (busy.value) return
   error.value = ''
   busy.value = true
   try {
@@ -28,6 +30,7 @@ async function submit() {
 
 <template>
   <main class="login-page">
+    <section class="login-intro"><div class="brand-mark"><AppIcon name="school" :size="28" /></div><p class="eyebrow">课程 · 资源 · 思政育人</p><h1>让教学资源有序组织，<br />让课程思政融入教学。</h1><p>围绕课程与思政元素汇聚教学材料，支持资源建设、规范审核与系统内部共享使用。</p><div class="login-feature"><AppIcon name="course" />按课程组织，按思政元素检索</div><div class="login-feature"><AppIcon name="audit" />教师建设 · 管理员审核 · 学生使用</div><div class="login-feature"><AppIcon name="file" />在线预览、收藏与下载记录</div></section>
     <section class="login-card">
       <div class="brand-mark">思政</div>
       <p class="eyebrow">课程思政教学资源管理系统</p>

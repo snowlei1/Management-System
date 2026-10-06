@@ -1,7 +1,9 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, defineAsyncComponent } from 'vue'
+const StatisticsCharts = defineAsyncComponent(() => import('../components/StatisticsCharts.vue'))
 import { getStatistics } from '../api/statistics.js'
 import DistributionTable from '../components/DistributionTable.vue'
+import LoadingState from '../components/LoadingState.vue'
 
 const data = ref(null)
 const busy = ref(false)
@@ -32,7 +34,7 @@ onMounted(load)
     <p class="muted">当前展示本地开发/测试库数据，不代表真实教学使用效果。全量累计统计，不含推荐、预测或综合评分。</p>
   </div><button class="secondary" :disabled="busy" @click="load">{{ busy ? '加载中…' : '刷新统计' }}</button></section>
   <p v-if="error" class="message error" role="alert">{{ error }}</p>
-  <p v-if="busy" class="card" role="status">正在读取统计数据…</p>
+  <LoadingState v-if="busy" />
   <template v-if="data">
     <p class="muted">本次加载时间：{{ loadedAt }}。各项数据来自同一数据库只读快照；后续操作请刷新查看。</p>
     <div class="statistics-grid"><section v-for="[label, value] in cards" :key="label" class="card statistic-card">
@@ -52,6 +54,7 @@ onMounted(load)
       <p class="muted">浏览/下载包含软删除资源的历史事件。浏览是成功详情 GET 次数，不是访问人数；下载是校验后准备文件响应的请求数，不保证客户端完整接收。收藏仅计 active=TRUE 且资源仍已发布的关系。</p>
     </section>
     <p class="muted">以下分布仅统计已发布资源，包含停用基础数据的历史关联及零资源条目。按资源数降序、ID升序排列；思政元素可多选，因此其关联数合计可能大于已发布资源数。</p>
+    <StatisticsCharts :data="data" />
     <DistributionTable title="按课程分布" :rows="data.courseDistribution" />
     <DistributionTable title="按资源分类分布" :rows="data.categoryDistribution" />
     <DistributionTable title="按课程思政元素关联分布" :rows="data.elementDistribution" />

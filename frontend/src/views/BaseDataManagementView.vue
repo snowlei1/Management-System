@@ -1,7 +1,9 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { baseDataApi } from '../api/baseData.js'
+import LoadingState from '../components/LoadingState.vue'
+import EmptyState from '../components/EmptyState.vue'
 
 const props = defineProps({ kind: { type: String, required: true } })
 const definitions = {
@@ -10,7 +12,7 @@ const definitions = {
   'resource-categories': { label: '资源分类', nameLimit: 80, descriptionLabel: '分类说明', hasCode: false },
 }
 const definition = computed(() => definitions[props.kind])
-const router = useRouter()
+const router = useRouter(), route = useRoute()
 const filters = reactive({ keyword: '', status: '' })
 const list = ref([])
 const total = ref(0)
@@ -136,6 +138,7 @@ watch(() => props.kind, () => {
   statusTarget.value = null
   load()
 }, { immediate: true })
+watch(() => route.fullPath, () => { if (route.query.create === '1') openCreate() }, { immediate: true })
 </script>
 
 <template>
@@ -151,6 +154,8 @@ watch(() => props.kind, () => {
     </form>
     <p v-if="error" class="message error" role="alert">{{ error }}</p>
     <p v-if="notice" class="message success" role="status">{{ notice }}</p>
+    <LoadingState v-if="loading" />
+    <p class="field-hint">共 {{ total }} 条{{ definition.label }}，下方列表按当前筛选分页展示。启停操作不会删除历史关联。</p>
     <div class="table-wrap">
       <table>
         <thead><tr><th>ID</th><th v-if="definition.hasCode">课程编号</th><th>名称</th><th>{{ definition.descriptionLabel }}</th><th>状态</th><th>更新时间</th><th>操作</th></tr></thead>
@@ -163,7 +168,7 @@ watch(() => props.kind, () => {
             <td class="actions"><button type="button" class="link-button" @click="openEdit(item)">编辑</button><button type="button" class="link-button" @click="askStatusChange(item)">{{ item.status === 'ACTIVE' ? '停用' : '启用' }}</button></td>
           </tr>
           <tr v-if="loading"><td :colspan="definition.hasCode ? 7 : 6" class="empty">正在加载…</td></tr>
-          <tr v-else-if="!list.length"><td :colspan="definition.hasCode ? 7 : 6" class="empty">没有符合条件的数据</td></tr>
+          <tr v-else-if="!list.length"><td :colspan="definition.hasCode ? 7 : 6"><EmptyState title="没有符合条件的数据" description="调整筛选条件，或新增基础数据。" /></td></tr>
         </tbody>
       </table>
     </div>

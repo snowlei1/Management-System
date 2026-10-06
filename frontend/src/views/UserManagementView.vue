@@ -3,6 +3,8 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../api/client.js'
 import { authState } from '../auth/state.js'
+import LoadingState from '../components/LoadingState.vue'
+import EmptyState from '../components/EmptyState.vue'
 
 const router = useRouter()
 const filters = reactive({ keyword: '', role: '', status: '' })
@@ -87,6 +89,7 @@ function openEdit(user) {
 }
 
 async function save() {
+  if (saving.value) return
   saving.value = true
   error.value = ''
   notice.value = ''
@@ -149,6 +152,8 @@ onMounted(load)
     </form>
     <p v-if="error" class="message error" role="alert">{{ error }}</p>
     <p v-if="notice" class="message success" role="status">{{ notice }}</p>
+    <LoadingState v-if="loading" />
+    <p class="field-hint">共 {{ total }} 个账号，教师与学生由管理员维护；账号停用后已有会话失效。</p>
     <div class="table-wrap">
       <table>
         <thead><tr><th>ID</th><th>账号</th><th>姓名</th><th>角色</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead>
@@ -161,7 +166,7 @@ onMounted(load)
             <td class="actions"><button class="link-button" type="button" @click="openEdit(user)">编辑</button>
               <button v-if="user.role !== 'ADMIN'" class="link-button" type="button" @click="askStatusChange(user)">{{ user.status === 'ACTIVE' ? '禁用' : '启用' }}</button></td>
           </tr>
-          <tr v-if="!loading && !list.length"><td colspan="7" class="empty">没有符合条件的用户</td></tr>
+          <tr v-if="!loading && !list.length"><td colspan="7"><EmptyState title="没有符合条件的用户" description="调整账号、角色或状态筛选后重试。" icon="users" /></td></tr>
           <tr v-if="loading"><td colspan="7" class="empty">正在加载…</td></tr>
         </tbody>
       </table>

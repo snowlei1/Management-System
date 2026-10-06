@@ -11,12 +11,18 @@ import ResourceDraftFormView from './views/ResourceDraftFormView.vue'
 import ResourceDraftDetailView from './views/ResourceDraftDetailView.vue'
 import ResourceReviewListView from './views/ResourceReviewListView.vue'
 import ResourceReviewDetailView from './views/ResourceReviewDetailView.vue'
-import PublishedResourceListView from './views/PublishedResourceListView.vue'
-import PublishedResourceDetailView from './views/PublishedResourceDetailView.vue'
+import PublishedResourceListView from './views/ResourceLibraryView.vue'
+import PublishedResourceDetailView from './views/ResourceContentView.vue'
+import NavigationView from './views/NavigationView.vue'
+import HistoryView from './views/HistoryView.vue'
+import PublishedLedgerView from './views/PublishedLedgerView.vue'
 import StatisticsView from './views/StatisticsView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
+  scrollBehavior(to, from, savedPosition) {
+    return savedPosition || { top: 0 }
+  },
   routes: [
     { path: '/login', name: 'login', component: LoginView, meta: { public: true } },
     {
@@ -26,6 +32,13 @@ const router = createRouter({
         { path: 'resources', name: 'resources', component: PublishedResourceListView, meta: { roles: ['TEACHER', 'STUDENT'] } },
         { path: 'resources/:id', name: 'published-resource-detail', component: PublishedResourceDetailView, meta: { roles: ['TEACHER', 'STUDENT'] } },
         { path: 'favorites', name: 'favorites', component: PublishedResourceListView, props: { favoritesOnly: true }, meta: { roles: ['TEACHER', 'STUDENT'] } },
+        { path: 'course-resources', component: NavigationView, meta: { roles: ['TEACHER','STUDENT'], title: '课程资源导航' } },
+        { path: 'course-resources/:id', component: NavigationView, meta: { roles: ['TEACHER','STUDENT'], title: '课程资源详情' } },
+        { path: 'ideological-topics', component: NavigationView, props: { topics: true }, meta: { roles: ['TEACHER','STUDENT'], title: '思政元素专题' } },
+        { path: 'ideological-topics/:id', component: NavigationView, props: { topics: true }, meta: { roles: ['TEACHER','STUDENT'], title: '思政专题详情' } },
+        { path: 'history/browse', component: HistoryView, props: { kind: 'browse' }, meta: { roles: ['TEACHER','STUDENT'], title: '最近浏览' } },
+        { path: 'history/downloads', component: HistoryView, props: { kind: 'downloads' }, meta: { roles: ['TEACHER','STUDENT'], title: '下载记录' } },
+        { path: 'published-resources', component: PublishedLedgerView, meta: { role: 'ADMIN', title: '已发布资源台账' } },
         { path: 'my-resources', name: 'my-resources', component: ResourceDraftListView, meta: { role: 'TEACHER' } },
         { path: 'my-resources/new', name: 'resource-create', component: ResourceDraftFormView, meta: { role: 'TEACHER' } },
         { path: 'my-resources/:id/edit', name: 'resource-edit', component: ResourceDraftFormView, meta: { role: 'TEACHER' } },

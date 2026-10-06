@@ -2,7 +2,7 @@
 
 课题名称：基于SpringBoot的课程思政教学资源管理系统设计与实现。
 
-当前完成第一至六阶段：认证权限、用户与基础数据管理、教师资源建设、提交审核、驳回重提与审核发布、教师/学生已发布资源中心和使用记录，以及管理员基础统计与全系统联调。已在本地开发/测试环境验证既定核心业务闭环；不代表生产部署或真实教学应用效果。发布后修改、撤回、下架与版本管理不在当前实现范围内。
+当前完成第一至七阶段：认证权限、用户与基础数据管理、教师资源建设、提交审核、驳回重提与审核发布、教师/学生资源使用、基础统计，以及统一前端、三角色工作台/门户、课程导航、思政专题和本人历史展示。已在本地开发/测试环境验证既定核心业务闭环；不代表生产部署或真实教学应用效果。发布后修改、撤回、下架与版本管理不在当前实现范围内。
 
 ## 技术环境
 
@@ -160,3 +160,15 @@ mvn -B package
 启动MySQL、后端、前端后，在项目根目录运行 `./scripts/test-stage2.ps1` 至 `./scripts/test-stage6.ps1` 完成HTTP回归。stage6通过独立SQL核对统计并跑通两轮审核与资源使用；会保留已发布测试资源和历史，基础数据结束时停用。脚本仅供本机公开开发种子账号，不提交数据库凭据。执行 `./scripts/check-system-consistency.ps1` 做全库和受控文件目录只读对账，不自动清理。自定义目录可传 `-StorageDirectory` 或使用RESOURCE_STORAGE_DIR。
 
 真实测试、浏览器三角色闭环、SQL口径、安全检查、已知限制详见 [`docs/15-基础统计与系统联调测试记录.md`](docs/15-基础统计与系统联调测试记录.md)。本轮不修改用户Word材料，不继续写论文。
+
+## 第七阶段：统一前端与资源门户
+
+新增 ECharts 5.6.0 和统一图标 @lucide/vue 1.52.0，其余技术版本与 Session/CSRF 认证不变。管理员使用真实概览、待审核事项、只读台账与统计图；教师使用本人四状态/驳回原因/资源表现；学生使用检索与资源卡片门户。支持侧边栏折叠、窄屏抽屉、Loading/Empty/Toast，保留全部既有写业务规则。
+
+新增课程导航 `/course-resources` 及详情、思政专题 `/ideological-topics` 及详情、本人 `/history/browse`、`/history/downloads`，仅教师/学生；新增管理员只读 `/published-resources`。课程/专题仅组织既有资源，不扩展教学管理。详情“同课程/相同思政元素”是固定关联，不是推荐；历史页仅显示当前仍已发布资源，不删除原始事件或改变管理员累计口径。
+
+新增10个GET映射：`/api/portal/courses`及`/{id}`、`/api/portal/ideological-topics`及`/{id}`、`/api/portal/resources/{id}`、`/api/history/{kind}`（browse/downloads）、`/api/teacher/resource-dashboard`、`/api/teacher/resource-presentations?ids=...`、`/api/admin/published-resources`、`/api/admin/review-overview`。各自角色限制与原接口一致，不新增表或写接口。
+
+最新全量后端验收需同时设置 STAGE3/4/5/6/7_MYSQL_TEST=true 再运行 `mvn -B package`；本阶段实际214项通过、零跳过（182单元/服务/文件，32真实MySQL）。上文181项等数字为对应阶段历史记录。前端运行 `pnpm build`；已在当前环境构建成功。第七阶段HTTP回归执行 `./scripts/test-stage7.ps1`，需先准备 README 所述本地开发账号及第三阶段第二教师；会保留批准的测试资源与历史，finally软删除草稿并停用基础数据，不用于生产库。缺少PDF夹具时仅生成本地测试文件。
+
+真实测试、完整接口表、菜单、20个1440×900截图清单、浏览器三角色及1366/窄屏检查、已知限制见 [`docs/16-前端信息架构与视觉交互优化记录.md`](docs/16-前端信息架构与视觉交互优化记录.md)。截图/原始日志只保留在本机 tmp/stage7 等忽略目录，不上传用户材料、密码或附件。

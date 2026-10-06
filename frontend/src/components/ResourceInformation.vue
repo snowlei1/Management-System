@@ -3,7 +3,7 @@ import { resourceStates, timeText } from '../api/resourceState.js'
 defineProps({ resource: { type: Object, required: true } })
 </script>
 <template>
-  <h2>{{ resource.title }}</h2><span class="badge" :class="resource.status === 'APPROVED' ? 'badge-active' : 'badge-disabled'">{{ resourceStates[resource.status] }} · {{ resource.status }}</span>
+  <h2>{{ resource.title }}</h2><span class="badge" :class="`state-${resource.status}`">{{ resourceStates[resource.status] }} · {{ resource.status }}</span>
   <dl class="resource-details">
     <dt>资源简介</dt><dd class="preserve-lines">{{ resource.description || '—' }}</dd>
     <dt>创建教师</dt><dd>{{ resource.teacherName }}</dd>
