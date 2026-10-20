@@ -1,10 +1,12 @@
 <script setup>
-import { nextTick, ref, watch } from 'vue'
+import { nextTick, provide, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { authState, logout } from '../auth/state.js'
 import AppIcon from '../components/AppIcon.vue'
 
 const route = useRoute(), router = useRouter()
+// Presentation only: shared resource pages retain the teacher's existing appearance.
+provide('studentPortalPresentation', true)
 const drawer = ref(false), busy = ref(false), menuButton = ref(null), drawerPanel = ref(null)
 const links = [
   ['/', '首页'], ['/resources', '资源中心'], ['/course-resources', '课程资源'],
@@ -33,7 +35,7 @@ async function signOut() {
 </script>
 
 <template>
-  <div class="portal-shell">
+  <div class="portal-shell student-digital">
     <header class="portal-header">
       <div class="portal-header-inner">
         <RouterLink to="/" class="portal-brand"><span class="brand-symbol"><AppIcon name="school" :size="26"/></span><span>课程思政<small>教学资源平台</small></span></RouterLink>

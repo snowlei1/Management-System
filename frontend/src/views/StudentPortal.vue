@@ -15,28 +15,33 @@ async function favorite(r) { if (changing.value) return; changing.value = r.id; 
 onMounted(async () => { try { const [l,f,c,t,h] = await Promise.all([publishedResourceApi.list({ size: 6 }),publishedResourceApi.favorites({ size: 3 }),portalApi.courses(),portalApi.topics(),portalApi.history('browse',{ size: 5 })]); latest.value=l.items;favorites.value=f.items;courses.value=c;topics.value=t;history.value=h.items } catch(e) { error.value=e.message } finally { loading.value=false } })
 </script>
 <template>
-  <section class="portal-hero">
-    <div><p class="eyebrow">课程 · 资源 · 思政元素</p><h1>课程思政教学资源中心</h1><p>按课程与思政元素查阅已发布的教学材料。</p>
-      <form class="hero-search" @submit.prevent="search"><AppIcon name="search"/><input v-model="keyword" aria-label="搜索教学资源" placeholder="搜索资源标题或简介" maxlength="200"/><button class="primary">检索资源</button></form>
-      <div class="hero-tags"><RouterLink to="/course-resources">课程资源<AppIcon name="arrow" :size="14"/></RouterLink><RouterLink to="/ideological-topics">思政专题<AppIcon name="arrow" :size="14"/></RouterLink><RouterLink to="/favorites">我的收藏<AppIcon name="arrow" :size="14"/></RouterLink></div>
-    </div><div class="hero-emblem" aria-hidden="true"><AppIcon name="course" :size="76"/><span>教学资源 · 内部共享</span></div>
+  <section class="learning-hero" aria-label="课程思政教学资源中心">
+    <div class="learning-hero-copy">
+      <p class="learning-overline"><span class="learning-dot"/>课程 · 资源 · 思政元素</p>
+      <h1>让每一次探索，<br/>都<span>多一点意义。</span></h1>
+      <p class="learning-intro">在课程里发现知识，在案例中看见价值。<br/>从一份教学资源，打开新的学习视角。</p>
+      <form class="learning-search" @submit.prevent="search"><AppIcon name="search"/><input v-model="keyword" aria-label="搜索教学资源" placeholder="搜索资源标题或简介" maxlength="200"/><button class="primary">检索资源<AppIcon name="arrow" :size="16"/></button></form>
+      <div class="learning-hero-links"><span>从这里开始</span><RouterLink to="/course-resources">课程资源<AppIcon name="arrow" :size="13"/></RouterLink><RouterLink to="/ideological-topics">思政专题<AppIcon name="arrow" :size="13"/></RouterLink></div>
+    </div>
+    <div class="learning-hero-art" aria-hidden="true">
+      <span class="learning-art-word">LEARN<br/>BEYOND.</span>
+      <div class="learning-sheet learning-sheet-back"/>
+      <div class="learning-sheet learning-sheet-front"><div class="learning-sheet-bar"><span>● ● ●</span><span>COURSE / RESOURCE</span></div><AppIcon name="file" :size="28"/><strong>知识之外<br/>看见价值</strong><div class="learning-sheet-rule"/><small>课程案例 · 价值思考 · 实践应用</small><div class="learning-sheet-footer"><span>教学资源</span><AppIcon name="arrow" :size="16"/></div></div>
+      <span class="learning-floating-tag"><span/>从好奇心开始</span><small class="learning-art-caption">专业知识 × 价值引领</small>
+    </div>
   </section>
   <p v-if="error" class="message error" role="alert">{{ error }}</p><LoadingState v-if="loading"/>
   <template v-else>
-    <div class="portal-discovery">
-      <section><div class="section-heading"><h2>最新发布资源</h2><RouterLink to="/resources" class="text-button">全部资源<AppIcon name="arrow" :size="15"/></RouterLink></div>
-        <div class="resource-card-grid"><ResourceCard v-for="r in latest" :key="r.id" :resource="r" horizontal :changing="!!changing" @favorite="favorite"/></div>
-        <EmptyState v-if="!latest.length" title="暂无已发布资源" description="教师资源通过审核后将展示在此处。"/>
-      </section>
-      <aside>
-        <section class="portal-course-strip"><div class="section-heading"><h2>课程导航</h2><RouterLink to="/course-resources" class="text-button">全部课程</RouterLink></div><p class="field-hint">按已发布资源数量排列，不代表课程质量或推荐。</p>
-          <RouterLink v-for="c in courseHighlights" :key="c.id" :to="`/course-resources/${c.id}`" class="navigation-row"><div><strong>{{ c.name }}</strong><small>{{ c.code }}</small></div><span class="count-label">{{ c.resourceCount }} 份</span></RouterLink><EmptyState v-if="!courses.length" title="暂无可用课程"/>
-        </section>
-        <section class="portal-topics"><div class="section-heading"><h2>课程思政专题</h2><RouterLink to="/ideological-topics" class="text-button">全部专题</RouterLink></div>
-          <div class="topic-links"><RouterLink v-for="t in topics.slice(0,6)" :key="t.id" :to="`/ideological-topics/${t.id}`"><strong>{{ t.name }}</strong><small>{{ t.resourceCount }} 份已发布资源</small></RouterLink></div><EmptyState v-if="!topics.length" title="暂无可用专题"/>
-        </section>
-      </aside>
-    </div>
+    <section class="learning-courses"><div class="learning-course-heading"><h2>从熟悉的课程开始</h2><RouterLink to="/course-resources" class="text-button">全部课程<AppIcon name="arrow" :size="15"/></RouterLink></div>
+      <div class="learning-course-links"><RouterLink v-for="c in courseHighlights" :key="c.id" :to="`/course-resources/${c.id}`"><AppIcon name="course" :size="20"/><span><strong>{{c.name}}</strong><small>{{c.resourceCount}} 份已发布资源</small></span><AppIcon name="arrow" :size="15"/></RouterLink></div>
+      <p v-if="courses.length" class="field-hint">按已发布资源数量排列，不代表课程质量或推荐。</p><EmptyState v-else title="暂无可用课程"/>
+    </section>
+    <section class="learning-library"><div class="section-heading"><div><p class="learning-overline">EXPLORE THE LIBRARY</p><h2>好内容，随时打开。</h2><p class="muted">最新审核发布的教学资源</p></div><RouterLink to="/resources" class="text-button">全部资源<AppIcon name="arrow" :size="15"/></RouterLink></div>
+      <div class="resource-card-grid"><ResourceCard v-for="r in latest" :key="r.id" :resource="r" visual-cover :changing="!!changing" @favorite="favorite"/></div><EmptyState v-if="!latest.length" title="暂无已发布资源" description="教师资源通过审核后将展示在此处。"/>
+    </section>
+    <section class="learning-topics"><div class="section-heading"><div><p class="learning-overline">THINK A LITTLE FURTHER</p><h2>换个视角，看见更多。</h2></div><RouterLink to="/ideological-topics" class="text-button">全部思政专题<AppIcon name="arrow" :size="15"/></RouterLink></div>
+      <div class="learning-topic-links"><RouterLink v-for="t in topics.slice(0,6)" :key="t.id" :to="`/ideological-topics/${t.id}`"><span class="learning-topic-icon"><AppIcon name="tags" :size="24"/></span><span><strong>{{t.name}}</strong><small>{{t.resourceCount}} 份已发布资源</small></span><AppIcon name="arrow" :size="16"/></RouterLink></div><EmptyState v-if="!topics.length" title="暂无可用专题"/>
+    </section>
     <div class="portal-memory">
       <section><div class="section-heading"><h2>最近浏览</h2><RouterLink to="/history/browse" class="text-button">浏览记录</RouterLink></div>
         <RouterLink v-for="h in history" :key="h.id" :to="`/resources/${h.resourceId}`" class="navigation-row"><AppIcon name="history"/><div><strong>{{ h.title }}</strong><small>{{ h.courseName }} · {{ timeText(h.accessedAt) }}</small></div><AppIcon name="chevron" :size="16"/></RouterLink><EmptyState v-if="!history.length" title="暂无浏览记录" description="打开资源详情后会记录一次访问事件。" icon="history"/>
