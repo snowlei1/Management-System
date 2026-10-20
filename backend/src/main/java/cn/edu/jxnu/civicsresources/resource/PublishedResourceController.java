@@ -18,13 +18,19 @@ public class PublishedResourceController {
     public ApiResponse<PublishedResourcePage> list(@AuthenticationPrincipal UserPrincipal user,
             @RequestParam(required=false) String keyword, @RequestParam(required=false) Long courseId,
             @RequestParam(required=false) Long categoryId, @RequestParam(required=false) Long elementId,
-            @RequestParam(defaultValue="1") int page, @RequestParam(defaultValue="10") int size) {
-        return ApiResponse.success(service.list(user, keyword, courseId, categoryId, elementId, false, page, size));
+            @RequestParam(defaultValue="1") int page, @RequestParam(defaultValue="10") int size,
+            @RequestParam(required=false) String format, @RequestParam(required=false) String sort,
+            @RequestParam(required=false) String from, @RequestParam(required=false) String to) {
+        return ApiResponse.success(service.search(user, keyword, courseId, categoryId, elementId, false, page, size, format, sort, from, to));
     }
     @GetMapping("/api/favorites")
     public ApiResponse<PublishedResourcePage> favorites(@AuthenticationPrincipal UserPrincipal user,
-            @RequestParam(defaultValue="1") int page, @RequestParam(defaultValue="10") int size) {
-        return ApiResponse.success(service.list(user, null, null, null, null, true, page, size));
+            @RequestParam(defaultValue="1") int page, @RequestParam(defaultValue="10") int size,
+            @RequestParam(required=false) String keyword, @RequestParam(required=false) Long courseId,
+            @RequestParam(required=false) Long categoryId, @RequestParam(required=false) Long elementId,
+            @RequestParam(required=false) String format, @RequestParam(required=false) String sort,
+            @RequestParam(required=false) String from, @RequestParam(required=false) String to) {
+        return ApiResponse.success(service.search(user, keyword, courseId, categoryId, elementId, true, page, size, format, sort, from, to));
     }
     @GetMapping("/api/resources/{id}")
     public ApiResponse<PublishedResourceView> detail(@AuthenticationPrincipal UserPrincipal user, @PathVariable long id, HttpServletRequest request) {

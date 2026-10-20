@@ -24,6 +24,14 @@ public class PublishedResourceService {
                 || invalidId(course) || invalidId(category) || invalidId(element)) throw bad("分页或筛选参数不正确");
         return transaction.execute(tx -> resources.page(user.id(), keyword, course, category, element, favoritesOnly, page, size));
     }
+    public PublishedResourcePage search(UserPrincipal user, String keyword, Long course, Long category,
+            Long element, boolean favoritesOnly, int page, int size, String format, String sort, String from, String to) {
+        consumer(user);
+        if (page < 1 || size < 1 || size > 100 || keyword != null && keyword.length() > 200
+                || invalidId(course) || invalidId(category) || invalidId(element)) throw bad("分页或筛选参数不正确");
+        var options = ResourceSearchOptions.parse(format, sort, from, to);
+        return transaction.execute(tx -> resources.page(user.id(), keyword, course, category, element, favoritesOnly, page, size, options));
+    }
     public PublishedResourceView detail(UserPrincipal user, long id) {
         return detail(user, id, true);
     }

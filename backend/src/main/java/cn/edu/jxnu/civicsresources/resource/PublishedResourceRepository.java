@@ -35,6 +35,10 @@ public class PublishedResourceRepository {
     }
     public PublishedResourcePage page(long user, String keyword, Long course, Long category, Long element,
             boolean favoritesOnly, int page, int size) {
+        return page(user, keyword, course, category, element, favoritesOnly, page, size, ResourceSearchOptions.defaults());
+    }
+    public PublishedResourcePage page(long user, String keyword, Long course, Long category, Long element,
+            boolean favoritesOnly, int page, int size, ResourceSearchOptions options) {
         StringBuilder where = new StringBuilder(" WHERE " + VISIBLE);
         var p = new MapSqlParameterSource("user", user);
         if (favoritesOnly) where.append(" AND f.active=TRUE");
@@ -48,9 +52,16 @@ public class PublishedResourceRepository {
             where.append(" AND EXISTS (SELECT 1 FROM resource_element_relation x WHERE x.resource_id=r.id AND x.element_id=:element)");
             p.addValue("element", element);
         }
+        switch (options.format()) {
+            case "PDF" -> where.append(" AND r.file_mime_type='application/pdf'");
+            case "IMAGE" -> where.append(" AND r.file_mime_type IN ('image/png','image/jpeg')");
+            case "OFFICE" -> where.append(" AND r.file_mime_type NOT IN ('application/pdf','image/png','image/jpeg')");
+        }
+        if (options.from() != null) { where.append(" AND r.published_at>=:fromDate"); p.addValue("fromDate", options.from().atStartOfDay()); }
+        if (options.to() != null) { where.append(" AND r.published_at<:untilDate"); p.addValue("untilDate", options.to().plusDays(1).atStartOfDay()); }
         Long total = jdbc.queryForObject("SELECT COUNT(*) " + FROM + where, p, Long.class);
         p.addValue("limit", size).addValue("offset", ((long) page - 1) * size);
-        List<Row> rows = jdbc.query(SELECT + where + " ORDER BY r.published_at DESC,r.id DESC LIMIT :limit OFFSET :offset", p,
+        List<Row> rows = jdbc.query(SELECT + where + " ORDER BY " + options.orderBy() + " LIMIT :limit OFFSET :offset", p,
                 (rs, n) -> new Row(ResourceDraftRepository.map(rs), rs.getBoolean("is_favorite")));
         var elements = metadata.elementsFor(rows.stream().map(row -> row.resource().id()).toList());
         return new PublishedResourcePage(rows.stream().map(row -> PublishedResourceView.from(row,
