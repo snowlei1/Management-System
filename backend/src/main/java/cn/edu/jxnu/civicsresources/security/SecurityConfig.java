@@ -64,6 +64,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/teacher/resource-dashboard", "/api/teacher/resource-presentations").hasRole("TEACHER")
                         .requestMatchers("/api/portal/**", "/api/history/**").hasAnyRole("TEACHER", "STUDENT")
                         .requestMatchers("/api/resources", "/api/resources/**", "/api/favorites", "/api/favorites/**").hasAnyRole("TEACHER", "STUDENT")
+                        .requestMatchers("/api/favorite-folders", "/api/favorite-folders/**").hasAnyRole("TEACHER", "STUDENT")
                         .requestMatchers("/api/users", "/api/users/**").hasRole("ADMIN")
                         .requestMatchers("/api/courses", "/api/courses/**",
                                 "/api/ideological-elements", "/api/ideological-elements/**",

@@ -26,11 +26,12 @@ public class PublishedResourceController {
     @GetMapping("/api/favorites")
     public ApiResponse<PublishedResourcePage> favorites(@AuthenticationPrincipal UserPrincipal user,
             @RequestParam(defaultValue="1") int page, @RequestParam(defaultValue="10") int size,
+            @RequestParam(required=false) Long folderId,
             @RequestParam(required=false) String keyword, @RequestParam(required=false) Long courseId,
             @RequestParam(required=false) Long categoryId, @RequestParam(required=false) Long elementId,
             @RequestParam(required=false) String format, @RequestParam(required=false) String sort,
             @RequestParam(required=false) String from, @RequestParam(required=false) String to) {
-        return ApiResponse.success(service.search(user, keyword, courseId, categoryId, elementId, true, page, size, format, sort, from, to));
+        return ApiResponse.success(service.search(user, keyword, courseId, categoryId, elementId, true, page, size, format, sort, from, to,folderId));
     }
     @GetMapping("/api/resources/{id}")
     public ApiResponse<PublishedResourceView> detail(@AuthenticationPrincipal UserPrincipal user, @PathVariable long id, HttpServletRequest request) {

@@ -6,6 +6,7 @@ import { editableResource } from '../api/resourceState.js'
 import ResourceInformation from '../components/ResourceInformation.vue'
 import AuditHistory from '../components/AuditHistory.vue'
 import ResourceSubmitDialog from '../components/ResourceSubmitDialog.vue'
+import ResourceMetadataEditor from '../components/ResourceMetadataEditor.vue'
 const route = useRoute(), resource = ref(null), error = ref(''), loading = ref(false), confirming = ref(false)
 let sequence = 0
 watch(() => route.params.id, async id => {
@@ -23,6 +24,7 @@ function submitted(r) { resource.value = r; confirming.value = false }
   <section v-if="resource" class="card resource-detail-card">
     <p v-if="route.query.saved && editableResource(resource)" class="message success" role="status">资源已保存；保存不会自动提交审核。</p>
     <ResourceInformation :resource="resource" />
+    <ResourceMetadataEditor :resource="resource"/>
     <p v-if="resource.status === 'PENDING'" class="message success">审核中，不能编辑、删除或再次提交。</p>
     <p v-if="resource.status === 'APPROVED'" class="message success">已审核通过并发布；本阶段不开放已发布内容改版。</p>
     <AuditHistory :records="resource.auditRecords" :pending-submission-no="resource.status==='PENDING'?resource.submissionNo:0" :pending-submitted-at="resource.pendingSubmittedAt" />

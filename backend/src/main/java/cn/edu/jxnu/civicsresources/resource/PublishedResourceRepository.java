@@ -12,17 +12,21 @@ public class PublishedResourceRepository {
         FROM teaching_resource r JOIN course c ON c.id=r.course_id
         JOIN resource_category k ON k.id=r.category_id JOIN app_user u ON u.id=r.created_by
         LEFT JOIN favorite f ON f.resource_id=r.id AND f.user_id=:user
+        LEFT JOIN resource_metadata m ON m.resource_id=r.id
         """;
     private static final String SELECT = """
         SELECT r.*,c.name AS course_name,c.status AS course_status,k.name AS category_name,
-        k.status AS category_status,u.display_name AS teacher_name,COALESCE(f.active,0) AS is_favorite
+        k.status AS category_status,u.display_name AS teacher_name,COALESCE(f.active,0) AS is_favorite,
+        (m.cover_key IS NOT NULL) AS has_cover,f.folder_id AS favorite_folder_id
         """ + FROM;
     private final NamedParameterJdbcTemplate jdbc;
     private final ResourceDraftRepository metadata;
     public PublishedResourceRepository(NamedParameterJdbcTemplate jdbc, ResourceDraftRepository metadata) {
         this.jdbc = jdbc; this.metadata = metadata;
     }
-    public record Row(TeachingResource resource, boolean favorite) { }
+    public record Row(TeachingResource resource, boolean favorite, boolean hasCover, Long folderId) {
+        public Row(TeachingResource resource,boolean favorite){this(resource,favorite,false,null);}
+    }
 
     public boolean lockVisible(long id) {
         // Do not lock favorite rows while upgrading their state: concurrent idempotent UPSERTs handle uniqueness.
@@ -31,7 +35,7 @@ public class PublishedResourceRepository {
     }
     public Optional<Row> findVisible(long id, long user) {
         return jdbc.query(SELECT + " WHERE r.id=:id AND " + VISIBLE, Map.of("id", id, "user", user),
-                (rs, n) -> new Row(ResourceDraftRepository.map(rs), rs.getBoolean("is_favorite"))).stream().findFirst();
+                (rs, n) -> new Row(ResourceDraftRepository.map(rs), rs.getBoolean("is_favorite"),rs.getBoolean("has_cover"),rs.getObject("favorite_folder_id",Long.class))).stream().findFirst();
     }
     public PublishedResourcePage page(long user, String keyword, Long course, Long category, Long element,
             boolean favoritesOnly, int page, int size) {
@@ -39,9 +43,15 @@ public class PublishedResourceRepository {
     }
     public PublishedResourcePage page(long user, String keyword, Long course, Long category, Long element,
             boolean favoritesOnly, int page, int size, ResourceSearchOptions options) {
+        return page(user,keyword,course,category,element,favoritesOnly,page,size,options,null);
+    }
+    public boolean folderOwned(long user,long folder){return jdbc.queryForObject("SELECT COUNT(*) FROM favorite_folder WHERE id=:id AND user_id=:user",Map.of("id",folder,"user",user),Long.class)>0;}
+    public PublishedResourcePage page(long user, String keyword, Long course, Long category, Long element,
+            boolean favoritesOnly, int page, int size, ResourceSearchOptions options, Long folder) {
         StringBuilder where = new StringBuilder(" WHERE " + VISIBLE);
         var p = new MapSqlParameterSource("user", user);
         if (favoritesOnly) where.append(" AND f.active=TRUE");
+        if(favoritesOnly&&folder!=null){if(folder==0)where.append(" AND f.folder_id IS NULL");else{where.append(" AND f.folder_id=:folder");p.addValue("folder",folder);}}
         if (keyword != null && !keyword.isBlank()) {
             where.append(" AND (r.title LIKE :keyword ESCAPE '!' OR r.description LIKE :keyword ESCAPE '!')");
             p.addValue("keyword", "%" + keyword.strip().replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%");
@@ -62,7 +72,7 @@ public class PublishedResourceRepository {
         Long total = jdbc.queryForObject("SELECT COUNT(*) " + FROM + where, p, Long.class);
         p.addValue("limit", size).addValue("offset", ((long) page - 1) * size);
         List<Row> rows = jdbc.query(SELECT + where + " ORDER BY " + options.orderBy() + " LIMIT :limit OFFSET :offset", p,
-                (rs, n) -> new Row(ResourceDraftRepository.map(rs), rs.getBoolean("is_favorite")));
+                (rs, n) -> new Row(ResourceDraftRepository.map(rs), rs.getBoolean("is_favorite"),rs.getBoolean("has_cover"),rs.getObject("favorite_folder_id",Long.class)));
         var elements = metadata.elementsFor(rows.stream().map(row -> row.resource().id()).toList());
         return new PublishedResourcePage(rows.stream().map(row -> PublishedResourceView.from(row,
                 elements.getOrDefault(row.resource().id(), List.of()))).toList(), total == null ? 0 : total, page, size);

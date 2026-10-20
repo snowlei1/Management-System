@@ -5,6 +5,7 @@ import { resourceReviewApi } from '../api/resources.js'
 import ResourceInformation from '../components/ResourceInformation.vue'
 import AuditHistory from '../components/AuditHistory.vue'
 import LoadingState from '../components/LoadingState.vue'
+import ResourceMetadataEditor from '../components/ResourceMetadataEditor.vue'
 const ReviewPdfPreview = defineAsyncComponent(() => import('../components/ReviewPdfPreview.vue'))
 const route = useRoute(), resource = ref(null), loading = ref(false), busy = ref(false)
 const error = ref(''), notice = ref(''), action = ref(''), reason = ref(''), previewing = ref(false)
@@ -52,6 +53,7 @@ async function decide() {
   <section class="page-heading heading-row"><div><p class="eyebrow">教学资源审核</p><h1>审核详情</h1><p class="muted">请查看附件内容后作出结论；审核历史不覆盖。</p></div><RouterLink class="secondary" to="/resource-reviews">返回审核列表</RouterLink></section>
   <p v-if="error && !action" class="message error" role="alert">{{ error }}</p><p v-if="notice" class="message success" role="status">{{ notice }}</p><LoadingState v-if="loading" />
   <div v-if="resource" class="review-layout"><section class="card resource-detail-card"><ResourceInformation :resource="resource" />
+    <ResourceMetadataEditor :resource="resource" scope="review"/>
     <section class="review-attachment"><h2>审核附件</h2><p>附件读取仅用于管理员审核，不计普通资源下载次数。Office文件请下载后查看。</p>
       <div class="attachment-actions"><button v-if="inline" class="secondary" :disabled="previewBusy" @click="preview">{{ previewBusy ? '读取附件…' : previewing ? '收起附件预览' : '预览审核附件' }}</button><a class="secondary" :href="`${attachmentUrl}?download=true`" target="_blank" rel="noopener">下载审核附件</a></div>
       <ReviewPdfPreview v-if="previewing && resource.fileMimeType === 'application/pdf'" :src="previewUrl" />
