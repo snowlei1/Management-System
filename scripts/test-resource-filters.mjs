@@ -1,0 +1,140 @@
+// Real browser regression against the local running application. No database fixtures are written.
+// Install Playwright separately, or set PLAYWRIGHT_MODULE_PATH to an existing installation.
+// Supply FILTER_TEST_STUDENT_PASSWORD, FILTER_TEST_TEACHER_PASSWORD and FILTER_TEST_ADMIN_PASSWORD.
+import assert from 'node:assert/strict'
+import { createRequire } from 'node:module'
+import { mkdir } from 'node:fs/promises'
+import path from 'node:path'
+const require = createRequire(import.meta.url)
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || 'playwright')
+const baseURL = process.env.FILTER_TEST_BASE_URL || 'http://127.0.0.1:5173'
+assert.ok(['127.0.0.1', 'localhost'].includes(new URL(baseURL).hostname), 'Only local development targets are allowed')
+const output = path.resolve('tmp/enhancements/resource-filters')
+await mkdir(output, { recursive: true })
+let checks = 0
+const errors = [], resourceRequests = []
+function check(name, condition) { assert.ok(condition, name); checks++; console.log(`PASS: ${name}`) }
+const browser = await chromium.launch({ headless: true, ...(process.env.FILTER_TEST_BROWSER_CHANNEL ? { channel: process.env.FILTER_TEST_BROWSER_CHANNEL } : {}) })
+async function login(role) {
+  const password = process.env[`FILTER_TEST_${role.toUpperCase()}_PASSWORD`]
+  assert.ok(password, `Missing development password environment variable for ${role}`)
+  const context = await browser.newContext({ baseURL, viewport: { width: 1440, height: 900 }, locale: 'zh-CN' })
+  const page = await context.newPage()
+  page.on('pageerror', error => errors.push(error.message))
+  page.on('request', request => {
+    if (new URL(request.url()).pathname === '/api/resources') resourceRequests.push(new URL(request.url()))
+  })
+  await page.goto('/login')
+  await page.locator('#username').fill(`dev_${role}`)
+  await page.locator('#password').fill(password)
+  await page.getByRole('button', { name: '登录', exact: true }).click()
+  await page.waitForURL(url => url.pathname === '/')
+  check(`${role} browser login`, true)
+  return { context, page }
+}
+async function ready(page) {
+  await page.locator('#library-keyword').waitFor()
+  await page.locator('.loading-state').waitFor({ state: 'detached' })
+  assert.equal(await page.locator('.message.error').count(), 0, 'No resource query error')
+}
+async function queryAction(page, action) {
+  const response = page.waitForResponse(r => ['/api/resources', '/api/favorites'].includes(new URL(r.url()).pathname) && r.request().method() === 'GET')
+  await action()
+  const result = await response
+  assert.equal(result.status(), 200)
+  await ready(page)
+  return result.json()
+}
+try {
+  const { context, page } = await login('student')
+  await page.goto('/resources?format=PDF&sort=OLDEST&page=2')
+  await ready(page)
+  check('URL restores page two', (await page.locator('.pagination').textContent()).includes('第 2 /'))
+  check('applied format and sort chips', await page.locator('.applied-filter-chip').count() === 2)
+  await page.locator('#library-keyword').fill('__unsent_filter__')
+  check('unsubmitted input does not become a chip', !(await page.locator('.applied-filters').textContent()).includes('__unsent_filter__'))
+  check('pending changes are explained', await page.locator('.pending-filter-note').isVisible())
+  await queryAction(page, () => page.getByRole('button', { name: '清除格式：PDF文档', exact: true }).click())
+  let url = new URL(page.url())
+  check('chip removal queries immediately and resets page', !url.searchParams.has('page') && !url.searchParams.has('format'))
+  check('other applied sort retained, pending keyword not applied', url.searchParams.get('sort') === 'OLDEST' && !url.searchParams.has('keyword'))
+  check('pending keyword remains editable after chip removal', await page.locator('#library-keyword').inputValue() === '__unsent_filter__')
+  await queryAction(page, () => page.getByRole('button', { name: '下一页', exact: true }).click())
+  check('pagination does not apply pending input', new URL(page.url()).searchParams.get('page') === '2' && !new URL(page.url()).searchParams.has('keyword'))
+  check('pagination preserves pending input', await page.locator('#library-keyword').inputValue() === '__unsent_filter__')
+  await page.getByRole('button', { name: '清除排序：最早发布', exact: true }).focus()
+  await queryAction(page, () => page.getByRole('button', { name: '清除排序：最早发布', exact: true }).press('Enter'))
+  check('keyboard sort removal restores NEWEST and page one', await page.locator('#library-sort').inputValue() === 'NEWEST' && !new URL(page.url()).searchParams.has('page'))
+  await queryAction(page, () => page.getByRole('button', { name: '查询', exact: true }).click())
+  check('explicit query applies pending keyword', new URL(page.url()).searchParams.get('keyword') === '__unsent_filter__')
+  check('zero-result query has an active removable chip', await page.getByRole('button', { name: '清除关键词：__unsent_filter__', exact: true }).isVisible() && await page.locator('.resource-card').count() === 0)
+  await queryAction(page, () => page.getByRole('button', { name: '清除全部', exact: true }).click())
+  check('clear all restores filters, results and default URL', !new URL(page.url()).search && await page.locator('.applied-filter-chip').count() === 0 && await page.locator('.resource-card').count() > 0)
+  await page.goto('/resources?format=PDF&sort=TITLE')
+  await ready(page)
+  await page.screenshot({ path: path.join(output, 'student-desktop.png') })
+  await page.reload()
+  await ready(page)
+  check('refresh preserves applied chips and sorting', await page.locator('.applied-filter-chip').count() === 2 && await page.locator('#library-sort').inputValue() === 'TITLE')
+  for (const width of [390, 320]) {
+    await page.setViewportSize({ width, height: 844 })
+    check(`no horizontal page overflow at ${width}px`, await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+    await page.screenshot({ path: path.join(output, `student-${width}.png`) })
+    await page.locator('.applied-filters').screenshot({ path: path.join(output, `student-chips-${width}.png`) })
+  }
+  const longKeyword = '课程思政'.repeat(50)
+  await page.goto(`/resources?keyword=${encodeURIComponent(longKeyword)}&format=PDF&sort=TITLE`)
+  await ready(page)
+  check('long keyword chip wraps within 320px', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+  await page.screenshot({ path: path.join(output, 'student-long-filter-320.png') })
+  await page.locator('.applied-filters').screenshot({ path: path.join(output, 'student-long-chips-320.png') })
+  await page.goto('/resources?sort=INVALID')
+  await page.getByRole('alert').first().waitFor()
+  check('failed query does not show stale resource cards', await page.locator('.resource-card').count() === 0)
+  await queryAction(page, () => page.getByRole('button', { name: '清除全部', exact: true }).click())
+  check('clear all recovers from a rejected query', await page.locator('.resource-card').count() > 0)
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/resources?format=PDF&sort=TITLE')
+  await ready(page)
+  const navigationBefore = page.url()
+  await page.goto('/favorites?folderId=0&sort=TITLE')
+  await ready(page)
+  check('ungrouped favorites chip uses truthful label', await page.getByRole('button', { name: '清除收藏夹：未分组', exact: true }).isVisible())
+  await queryAction(page, () => page.getByRole('button', { name: '清除收藏夹：未分组', exact: true }).click())
+  check('removing folder remains in favorites context', new URL(page.url()).pathname === '/favorites' && !new URL(page.url()).searchParams.has('folderId'))
+  await page.goBack()
+  await ready(page)
+  check('back restores resource-center query', page.url() === navigationBefore && await page.locator('.applied-filter-chip').count() === 2)
+  await page.goForward()
+  await ready(page)
+  check('forward restores favorites and its applied sort', new URL(page.url()).pathname === '/favorites' && await page.locator('#library-sort').inputValue() === 'TITLE')
+  const courses = await (await context.request.get('/api/options/courses')).json()
+  const elements = await (await context.request.get('/api/options/ideological-elements')).json()
+  for (const [kind, id, parameter] of [['course-resources', courses.data[0]?.id, 'courseId'], ['ideological-topics', elements.data[0]?.id, 'elementId']]) {
+    assert.ok(id, `Existing ${kind} option required`)
+    await page.goto(`/${kind}/${id}`)
+    await ready(page)
+    await page.locator('#library-format').selectOption('PDF')
+    await queryAction(page, () => page.getByRole('button', { name: '查询', exact: true }).click())
+    await queryAction(page, () => page.getByRole('button', { name: '清除全部', exact: true }).click())
+    check(`${kind} fixed scope survives clear all`, resourceRequests.at(-1).searchParams.get(parameter) === String(id))
+    check(`${kind} fixed scope has no removable chip`, await page.locator('.applied-filter-chip').count() === 0)
+  }
+  await context.close()
+  const teacher = await login('teacher')
+  await teacher.page.goto('/resources?format=PDF&sort=TITLE')
+  await ready(teacher.page)
+  await queryAction(teacher.page, () => teacher.page.getByRole('button', { name: '清除格式：PDF文档', exact: true }).click())
+  check('teacher uses identical applied-filter semantics', new URL(teacher.page.url()).searchParams.get('sort') === 'TITLE' && !new URL(teacher.page.url()).searchParams.has('format'))
+  await teacher.page.screenshot({ path: path.join(output, 'teacher-desktop.png') })
+  await teacher.context.close()
+  const admin = await login('admin')
+  await admin.page.goto('/resources')
+  await admin.page.waitForURL(url => url.pathname === '/')
+  check('ADMIN cannot enter consumer resource route', new URL(admin.page.url()).pathname === '/')
+  check('ADMIN resource API boundary retained', (await admin.context.request.get('/api/resources')).status() === 403)
+  await admin.context.close()
+  check('no browser page errors', errors.length === 0)
+  console.log(`FILTER_BROWSER_CHECKS_PASSED=${checks}`)
+  console.log(`SCREENSHOTS=${output}`)
+} finally { await browser.close() }
