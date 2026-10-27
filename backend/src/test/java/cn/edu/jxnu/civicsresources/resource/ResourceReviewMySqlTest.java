@@ -68,8 +68,10 @@ class ResourceReviewMySqlTest {
     }
     @Test void rejectedReplacementRetainsHistoryAndResubmits() throws Exception {
         long id=draft().id();drafts.submit(teacher,id);reviews.reject(admin,id,1,"请完善思政案例说明");
+        // ZIP entries include timestamps: compare the exact upload, not a newly generated archive.
+        byte[] revisedBytes=LocalResourceFileStorageTest.docx();
         var edited=drafts.update(teacher,id,new ResourceDraftRequest(tag+"-修改",null,course,category,List.of(element)),
-                LocalResourceFileStorageTest.file("revised.docx","application/vnd.openxmlformats-officedocument.wordprocessingml.document",LocalResourceFileStorageTest.docx()));
+                LocalResourceFileStorageTest.file("revised.docx","application/vnd.openxmlformats-officedocument.wordprocessingml.document",revisedBytes));
         assertEquals("REJECTED",edited.status());assertEquals(1,edited.submissionNo());assertEquals(1,edited.auditRecords().size());
         assertEquals(2,drafts.submit(teacher,id).submissionNo());
         assertEquals(409,assertThrows(BusinessException.class,()->reviews.approve(admin,id,1)).status().value());
@@ -77,7 +79,7 @@ class ResourceReviewMySqlTest {
         var approved=reviews.approve(admin,id,2);
         assertEquals("APPROVED",approved.status());assertNotNull(approved.publishedAt());assertEquals(2,approved.auditRecords().size());
         assertEquals(List.of("REJECT","APPROVE"),approved.auditRecords().stream().map(AuditRecordView::decision).toList());
-        assertArrayEquals(LocalResourceFileStorageTest.docx(),reviews.attachment(admin,id).bytes());
+        assertArrayEquals(revisedBytes,reviews.attachment(admin,id).bytes());
     }
     @Test void twoDistinctAdministratorsConcurrentHttpDecision() throws Exception {
         // Local-only account provisioning: reuse a BCrypt hash, never add an admin-creation business API.
