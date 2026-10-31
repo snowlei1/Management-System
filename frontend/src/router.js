@@ -17,6 +17,7 @@ import NavigationView from './views/NavigationView.vue'
 import HistoryView from './views/HistoryView.vue'
 import PublishedLedgerView from './views/PublishedLedgerView.vue'
 import StatisticsView from './views/StatisticsView.vue'
+import ResourceFeedbackView from './views/ResourceFeedbackView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -29,6 +30,8 @@ const router = createRouter({
       path: '/', component: AppLayout, children: [
         { path: '', name: 'home', component: HomeView },
         { path: 'profile', name: 'profile', component: ProfileView },
+        { path: 'my-feedback', component: ResourceFeedbackView, meta: { roles: ['TEACHER','STUDENT'], title: '我的反馈' } },
+        { path: 'resource-feedback', component: ResourceFeedbackView, props: { management: true }, meta: { role: 'ADMIN', title: '资源问题反馈' } },
         { path: 'resources', name: 'resources', component: PublishedResourceListView, meta: { roles: ['TEACHER', 'STUDENT'] } },
         { path: 'resources/:id', name: 'published-resource-detail', component: PublishedResourceDetailView, meta: { roles: ['TEACHER', 'STUDENT'] } },
         { path: 'favorites', name: 'favorites', component: PublishedResourceListView, props: { favoritesOnly: true }, meta: { roles: ['TEACHER', 'STUDENT'] } },

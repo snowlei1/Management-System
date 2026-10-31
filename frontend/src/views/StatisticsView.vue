@@ -39,11 +39,11 @@ onMounted(load)
     <p class="muted">本次加载时间：{{ loadedAt }}。各项数据来自同一数据库只读快照；后续操作请刷新查看。</p>
     <div class="statistics-grid"><section v-for="[label, value] in cards" :key="label" class="card statistic-card">
       <span>{{ label }}</span><strong>{{ value }}</strong></section></div>
-    <section class="card statistics-section"><h2>教学资源状态</h2><p>当前资源排除软删除。已发布资源须为 APPROVED、未删除且发布时间非空。</p>
+    <section class="card statistics-section"><h2>教学资源状态</h2><p>当前资源排除软删除。已发布资源须为 APPROVED、未删除、发布时间非空且未下架；审核通过的下架资源单列。</p>
       <div class="statistics-grid">
         <div v-for="[label, value] in [['当前资源总数', data.resources.total], ['草稿 DRAFT', data.resources.draft],
           ['待审核 PENDING', data.resources.pending], ['驳回 REJECTED', data.resources.rejected],
-          ['已发布 APPROVED', data.resources.approved], ['软删除（独立历史数）', data.resources.deleted]]" :key="label" class="statistic-card">
+          ['当前已发布', data.resources.approved], ['已下架', data.resources.withdrawn], ['软删除（独立历史数）', data.resources.deleted]]" :key="label" class="statistic-card">
           <span>{{ label }}</span><strong>{{ value }}</strong></div>
       </div>
     </section>

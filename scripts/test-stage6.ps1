@@ -42,7 +42,7 @@ function SQL([string]$query){
 function BaseRow($type,$suffix){$p=@{name="S6-$tag-$suffix";description='第六阶段本地开发测试'};if($type -eq 'courses'){$p.courseCode="S6-$tag"};$r=Request $admin POST "/$type" $p;Status 'base create' $r 201;$script:rows+=@{Type=$type;Id=$r.Json.data.id};return [long]$r.Json.data.id}
 function CompareStatistics {
     $r=Request $admin GET '/admin/statistics/overview';Status 'statistics overview' $r 200;$s=$r.Json.data
-    $visible="status='APPROVED' AND deleted_at IS NULL AND published_at IS NOT NULL"
+    $visible="status='APPROVED' AND deleted_at IS NULL AND published_at IS NOT NULL AND withdrawn_at IS NULL"
     $checks=@(
         @{Value=$s.users.total;Sql='SELECT COUNT(*) FROM app_user'},
         @{Value=$s.users.admin;Sql="SELECT COUNT(*) FROM app_user u JOIN role r ON r.id=u.role_id WHERE r.code='ADMIN'"},
@@ -53,9 +53,10 @@ function CompareStatistics {
         @{Value=$s.resources.total;Sql='SELECT COUNT(*) FROM teaching_resource WHERE deleted_at IS NULL'},
         @{Value=$s.resources.deleted;Sql='SELECT COUNT(*) FROM teaching_resource WHERE deleted_at IS NOT NULL'},
         @{Value=$s.resources.approved;Sql="SELECT COUNT(*) FROM teaching_resource WHERE $visible"},
+        @{Value=$s.resources.withdrawn;Sql="SELECT COUNT(*) FROM teaching_resource WHERE status='APPROVED' AND deleted_at IS NULL AND withdrawn_at IS NOT NULL"},
         @{Value=$s.usage.browseEvents;Sql='SELECT COUNT(*) FROM browse_record'},
         @{Value=$s.usage.downloadRequests;Sql='SELECT COUNT(*) FROM download_record'},
-        @{Value=$s.usage.currentFavorites;Sql="SELECT COUNT(*) FROM favorite f JOIN teaching_resource r ON r.id=f.resource_id WHERE f.active=TRUE AND r.status='APPROVED' AND r.deleted_at IS NULL AND r.published_at IS NOT NULL"})
+        @{Value=$s.usage.currentFavorites;Sql="SELECT COUNT(*) FROM favorite f JOIN teaching_resource r ON r.id=f.resource_id WHERE f.active=TRUE AND r.status='APPROVED' AND r.deleted_at IS NULL AND r.published_at IS NOT NULL AND r.withdrawn_at IS NULL"})
     foreach($state in @('DRAFT','PENDING','REJECTED')){$checks+=@{Value=$s.resources.($state.ToLower());Sql="SELECT COUNT(*) FROM teaching_resource WHERE deleted_at IS NULL AND status='$state'"}}
     foreach($pair in @(@{Key='courses';Table='course'},@{Key='elements';Table='ideological_element'},@{Key='categories';Table='resource_category'})){
         $checks+=@{Value=$s.($pair.Key).total;Sql="SELECT COUNT(*) FROM $($pair.Table)"}
@@ -67,7 +68,7 @@ function CompareStatistics {
         Assert 'distribution row total' (@($s.($pair.Key)).Count -eq $expected.Count)
         foreach($row in $s.($pair.Key)){Assert 'distribution equals SQL' ($expected[[string]$row.id] -eq [long]$row.resourceCount)}
     }
-    $expected=@{};foreach($line in (SQL "SELECT b.id,COUNT(p.resource_id) FROM ideological_element b LEFT JOIN (SELECT x.resource_id,x.element_id FROM resource_element_relation x JOIN teaching_resource r ON r.id=x.resource_id WHERE r.status='APPROVED' AND r.deleted_at IS NULL AND r.published_at IS NOT NULL) p ON p.element_id=b.id GROUP BY b.id;")){$parts=$line.Split("`t");$expected[$parts[0]]=[long]$parts[1]}
+    $expected=@{};foreach($line in (SQL "SELECT b.id,COUNT(p.resource_id) FROM ideological_element b LEFT JOIN (SELECT x.resource_id,x.element_id FROM resource_element_relation x JOIN teaching_resource r ON r.id=x.resource_id WHERE r.status='APPROVED' AND r.deleted_at IS NULL AND r.published_at IS NOT NULL AND r.withdrawn_at IS NULL) p ON p.element_id=b.id GROUP BY b.id;")){$parts=$line.Split("`t");$expected[$parts[0]]=[long]$parts[1]}
     Assert 'element distribution row total' (@($s.elementDistribution).Count -eq $expected.Count)
     foreach($row in $s.elementDistribution){Assert 'element distribution equals SQL' ($expected[[string]$row.id] -eq [long]$row.resourceCount)}
     Assert 'DTO does not leak private fields' (-not ($s|ConvertTo-Json -Depth 10).Contains('password') -and -not ($s|ConvertTo-Json -Depth 10).Contains('storageKey'))

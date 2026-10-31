@@ -72,7 +72,7 @@ class StatisticsMySqlTest {
         assertEquals(jdbc.queryForObject("SELECT COUNT(*) FROM app_user",Long.class),result.users().total());
         assertEquals(result.users().total(),result.users().admin()+result.users().teacher()+result.users().student());
         assertEquals(result.users().total(),result.users().active()+result.users().disabled());
-        assertEquals(result.resources().total(),result.resources().draft()+result.resources().pending()+result.resources().rejected()+result.resources().approved());
+        assertEquals(result.resources().total(),result.resources().draft()+result.resources().pending()+result.resources().rejected()+result.resources().approved()+result.resources().withdrawn());
         assertEquals(result.resources().approved(),result.courseDistribution().stream().mapToLong(r->r.resourceCount()).sum());
         assertEquals(result.resources().approved(),result.categoryDistribution().stream().mapToLong(r->r.resourceCount()).sum());
         assertEquals(0,result.courseDistribution().stream().filter(r->r.id()==course).findFirst().orElseThrow().resourceCount());
@@ -83,7 +83,7 @@ class StatisticsMySqlTest {
         definitions.put("app_user","id BIGINT,role_id BIGINT,status VARCHAR(16)");
         for(String table:List.of("course","ideological_element","resource_category"))
             definitions.put(table,"id BIGINT,name VARCHAR(120),status VARCHAR(16)");
-        definitions.put("teaching_resource","id BIGINT,status VARCHAR(16),deleted_at DATETIME,published_at DATETIME,course_id BIGINT,category_id BIGINT");
+        definitions.put("teaching_resource","id BIGINT,status VARCHAR(16),deleted_at DATETIME,published_at DATETIME,withdrawn_at DATETIME,course_id BIGINT,category_id BIGINT");
         definitions.put("resource_element_relation","resource_id BIGINT,element_id BIGINT");
         definitions.put("favorite","resource_id BIGINT,active BOOLEAN");
         definitions.put("browse_record","id BIGINT");definitions.put("download_record","id BIGINT");

@@ -67,6 +67,7 @@ async function save() {
         <section class="form-section"><h2>基本信息</h2><p class="field-hint">用明确的标题和简介描述教学材料。</p>
         <label for="draft-title">资源名称 / 标题</label><input id="draft-title" v-model="form.title" maxlength="200" required />
         <label for="draft-description">资源简介（可选）</label><textarea id="draft-description" v-model="form.description" maxlength="2000" rows="4" />
+        <p class="field-hint">保存草稿后，可在资源详情中单独设置可选封面、原作者、出处及使用限制说明；提交审核后这些内容只读。</p>
         </section><section class="form-section"><h2>资源归属</h2><p class="field-hint">每份资源归属于一门课程和一个资源分类。</p>
         <div class="resource-grid"><div><label for="draft-course">所属课程</label><select id="draft-course" v-model="form.courseId" required><option value="" disabled>请选择课程</option><option v-for="c in courses" :key="c.id" :value="c.id" :disabled="c.inactive">{{ c.name }}</option></select></div><div><label for="draft-category">资源分类</label><select id="draft-category" v-model="form.categoryId" required><option value="" disabled>请选择分类</option><option v-for="c in categories" :key="c.id" :value="c.id" :disabled="c.inactive">{{ c.name }}</option></select></div></div>
         <p v-if="!courses.length || !categories.length" class="message error">暂无可用课程或分类，请先联系管理员维护基础数据。</p>

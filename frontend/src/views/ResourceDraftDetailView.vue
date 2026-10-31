@@ -26,7 +26,7 @@ function submitted(r) { resource.value = r; confirming.value = false }
     <ResourceInformation :resource="resource" />
     <ResourceMetadataEditor :resource="resource"/>
     <p v-if="resource.status === 'PENDING'" class="message success">审核中，不能编辑、删除或再次提交。</p>
-    <p v-if="resource.status === 'APPROVED'" class="message success">已审核通过并发布；本阶段不开放已发布内容改版。</p>
+    <p v-if="resource.status === 'APPROVED'" class="message" :class="resource.withdrawnAt?'error':'success'">{{resource.withdrawnAt?'该资源已由管理员下架，暂不可供用户使用。':'已审核通过并发布。'}}审核通过内容不可编辑；下架也不开放修改。</p>
     <AuditHistory :records="resource.auditRecords" :pending-submission-no="resource.status==='PENDING'?resource.submissionNo:0" :pending-submitted-at="resource.pendingSubmittedAt" />
     <div v-if="editableResource(resource)" class="modal-actions"><RouterLink class="secondary" :to="`/my-resources/${resource.id}/edit`">编辑资源</RouterLink><button class="primary" @click="confirming = true">{{ resource.status === 'REJECTED' ? '重新提交审核' : '提交审核' }}</button></div>
   </section>

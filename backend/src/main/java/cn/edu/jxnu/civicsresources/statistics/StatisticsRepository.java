@@ -7,7 +7,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public class StatisticsRepository {
-    private static final String PUBLISHED = "r.status='APPROVED' AND r.deleted_at IS NULL AND r.published_at IS NOT NULL";
+    private static final String PUBLISHED = cn.edu.jxnu.civicsresources.resource.ResourceVisibility.PUBLISHED;
     private final JdbcTemplate jdbc;
     public StatisticsRepository(JdbcTemplate jdbc) { this.jdbc = jdbc; }
     public Users users() {
@@ -33,10 +33,11 @@ public class StatisticsRepository {
               COALESCE(SUM(deleted_at IS NULL AND status='DRAFT'),0) draft,
               COALESCE(SUM(deleted_at IS NULL AND status='PENDING'),0) pending,
               COALESCE(SUM(deleted_at IS NULL AND status='REJECTED'),0) rejected,
-              COALESCE(SUM(deleted_at IS NULL AND status='APPROVED' AND published_at IS NOT NULL),0) approved,
+              COALESCE(SUM(deleted_at IS NULL AND status='APPROVED' AND published_at IS NOT NULL AND withdrawn_at IS NULL),0) approved,
+              COALESCE(SUM(deleted_at IS NULL AND status='APPROVED' AND withdrawn_at IS NOT NULL),0) withdrawn,
               COALESCE(SUM(deleted_at IS NOT NULL),0) deleted FROM teaching_resource
             """, (rs,n) -> new Resources(rs.getLong("total"),rs.getLong("draft"),rs.getLong("pending"),
-                rs.getLong("rejected"),rs.getLong("approved"),rs.getLong("deleted")));
+                rs.getLong("rejected"),rs.getLong("approved"),rs.getLong("deleted"),rs.getLong("withdrawn")));
     }
     public Usage usage() {
         return jdbc.queryForObject("SELECT (SELECT COUNT(*) FROM browse_record) browse_events,"

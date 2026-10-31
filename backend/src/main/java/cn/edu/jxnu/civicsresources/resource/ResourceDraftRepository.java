@@ -130,6 +130,7 @@ public class ResourceDraftRepository {
                 rs.getString("file_original_name"), rs.getString("file_mime_type"), rs.getLong("file_size_bytes"),
                 rs.getTimestamp("created_at").toLocalDateTime(), rs.getTimestamp("updated_at").toLocalDateTime(),
                 rs.getString("teacher_name"), rs.getLong("submission_no"),
-                rs.getTimestamp("published_at") == null ? null : rs.getTimestamp("published_at").toLocalDateTime());
+                rs.getTimestamp("published_at") == null ? null : rs.getTimestamp("published_at").toLocalDateTime(),
+                rs.getTimestamp("withdrawn_at") == null ? null : rs.getTimestamp("withdrawn_at").toLocalDateTime());
     }
 }

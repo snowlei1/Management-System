@@ -9,7 +9,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public class ResourcePortalRepository {
-    static final String VISIBLE = "r.status='APPROVED' AND r.deleted_at IS NULL AND r.published_at IS NOT NULL";
+    static final String VISIBLE = ResourceVisibility.PUBLISHED;
     private static final String FROM = " FROM teaching_resource r JOIN course c ON c.id=r.course_id "
             + "JOIN resource_category k ON k.id=r.category_id JOIN app_user u ON u.id=r.created_by ";
     private static final String SELECT = "SELECT r.*,c.name course_name,c.status course_status,k.name category_name,"
@@ -80,7 +80,7 @@ public class ResourcePortalRepository {
     }
     public List<TeachingResource> ownRecent(long owner, String state) {
         String condition=state==null?"":" AND r.status=:state";
-        if("APPROVED".equals(state)) condition+=" AND r.published_at IS NOT NULL";
+        if("APPROVED".equals(state)) condition+=" AND r.published_at IS NOT NULL AND r.withdrawn_at IS NULL";
         return jdbc.query(SELECT+" WHERE r.created_by=:owner AND r.deleted_at IS NULL"+condition+" ORDER BY r.updated_at DESC,r.id DESC LIMIT 5",
                 new MapSqlParameterSource("owner",owner).addValue("state",state),(rs,n)->ResourceDraftRepository.map(rs));
     }
@@ -101,7 +101,11 @@ public class ResourcePortalRepository {
         return rows.stream().map(r->new ResourceRow(ResourceDraftView.from(r,tags.getOrDefault(r.id(),List.of())),uses.get(r.id()),audits.get(r.id()))).toList();
     }
     public ResourceTable ledger(String keyword, Long course, Long category, Long teacher, int page, int size) {
-        StringBuilder where=new StringBuilder(" WHERE "+VISIBLE+" AND r.submission_no>0"); var p=new MapSqlParameterSource();
+        return ledger(keyword,course,category,teacher,page,size,"LIVE");
+    }
+    public ResourceTable ledger(String keyword, Long course, Long category, Long teacher, int page, int size,String publication) {
+        StringBuilder where=new StringBuilder(" WHERE r.status='APPROVED' AND r.deleted_at IS NULL AND r.published_at IS NOT NULL AND r.submission_no>0"); var p=new MapSqlParameterSource();
+        if("LIVE".equals(publication))where.append(" AND r.withdrawn_at IS NULL");else if("WITHDRAWN".equals(publication))where.append(" AND r.withdrawn_at IS NOT NULL");
         if(keyword!=null&&!keyword.isBlank()) { where.append(" AND r.title LIKE :keyword ESCAPE '!'"); p.addValue("keyword","%"+keyword.strip().replace("!","!!").replace("%","!%").replace("_","!_")+"%"); }
         if(course!=null){where.append(" AND r.course_id=:course");p.addValue("course",course);}
         if(category!=null){where.append(" AND r.category_id=:category");p.addValue("category",category);}

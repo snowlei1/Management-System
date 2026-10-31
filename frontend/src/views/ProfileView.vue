@@ -12,4 +12,5 @@ const statusNames = { ACTIVE: '启用', DISABLED: '停用' }
     <div><span>角色</span><strong>{{ roleNames[authState.user?.role] }}</strong></div>
     <div><span>状态</span><strong>{{ statusNames[authState.user?.status] }}</strong></div>
   </section>
+  <p v-if="['TEACHER','STUDENT'].includes(authState.user?.role)"><RouterLink class="secondary" to="/my-feedback">我的资源反馈与处理结果</RouterLink></p>
 </template>

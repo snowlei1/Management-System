@@ -14,7 +14,8 @@ defineProps({ resource: { type: Object, required: true } })
     <dt>附件大小</dt><dd>{{ resource.fileSizeBytes }} 字节（{{ (resource.fileSizeBytes / 1024).toFixed(1) }} KiB）</dd>
     <dt>提交轮次</dt><dd>{{ resource.submissionNo }}</dd>
     <template v-if="resource.pendingSubmittedAt"><dt>本轮提交时间</dt><dd>{{ timeText(resource.pendingSubmittedAt) }}</dd></template>
-    <dt>发布时间</dt><dd>{{ timeText(resource.publishedAt) }}</dd>
+    <dt>首次发布时间</dt><dd>{{ timeText(resource.publishedAt) }}</dd>
+    <template v-if="resource.status==='APPROVED'"><dt>发布状态</dt><dd>{{resource.withdrawnAt?'已下架（暂停系统内使用）':'已发布'}}<span v-if="resource.withdrawnAt"> · {{timeText(resource.withdrawnAt)}}</span></dd></template>
     <dt>创建时间</dt><dd>{{ timeText(resource.createdAt) }}</dd><dt>更新时间</dt><dd>{{ timeText(resource.updatedAt) }}</dd>
   </dl>
 </template>

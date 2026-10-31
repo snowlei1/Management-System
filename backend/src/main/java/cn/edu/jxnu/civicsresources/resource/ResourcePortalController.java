@@ -29,7 +29,7 @@ public class ResourcePortalController {
     @GetMapping("/api/teacher/resource-presentations") @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<List<ResourceRow>> ownPresentations(@AuthenticationPrincipal UserPrincipal user,@RequestParam List<Long> ids){return ApiResponse.success(service.ownPresentations(user,ids));}
     @GetMapping("/api/admin/published-resources") @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<ResourceTable> ledger(@AuthenticationPrincipal UserPrincipal user,@RequestParam(required=false)String keyword,@RequestParam(required=false)Long courseId,@RequestParam(required=false)Long categoryId,@RequestParam(required=false)Long teacherId,@RequestParam(defaultValue="1")int page,@RequestParam(defaultValue="10")int size){return ApiResponse.success(service.ledger(user,keyword,courseId,categoryId,teacherId,page,size));}
+    public ApiResponse<ResourceTable> ledger(@AuthenticationPrincipal UserPrincipal user,@RequestParam(required=false)String keyword,@RequestParam(required=false)Long courseId,@RequestParam(required=false)Long categoryId,@RequestParam(required=false)Long teacherId,@RequestParam(defaultValue="1")int page,@RequestParam(defaultValue="10")int size,@RequestParam(defaultValue="LIVE")String publication){return ApiResponse.success(service.ledger(user,keyword,courseId,categoryId,teacherId,page,size,publication));}
     @GetMapping("/api/admin/review-overview") @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<List<ResourceRow>> pendingRecent(@AuthenticationPrincipal UserPrincipal user){return ApiResponse.success(service.pendingRecent(user));}
 }

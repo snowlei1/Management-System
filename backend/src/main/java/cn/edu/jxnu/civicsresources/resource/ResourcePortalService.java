@@ -45,6 +45,11 @@ public class ResourcePortalService {
         if(keyword!=null&&keyword.length()>200||invalid(course)||invalid(category)||invalid(teacher))throw bad("筛选参数不正确");
         return repository.ledger(keyword,course,category,teacher,page,size);
     }
+    public ResourceTable ledger(UserPrincipal user,String keyword,Long course,Long category,Long teacher,int page,int size,String publication) {
+        role(user,"ADMIN");page(page,size);
+        if(keyword!=null&&keyword.length()>200||invalid(course)||invalid(category)||invalid(teacher)||!Set.of("ALL","LIVE","WITHDRAWN").contains(publication))throw bad("筛选参数不正确");
+        return repository.ledger(keyword,course,category,teacher,page,size,publication);
+    }
     public List<ResourceRow> pendingRecent(UserPrincipal user) {
         role(user,"ADMIN"); return repository.rows(repository.pendingRecent());
     }

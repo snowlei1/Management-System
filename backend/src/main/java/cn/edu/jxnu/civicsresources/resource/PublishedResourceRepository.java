@@ -7,7 +7,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public class PublishedResourceRepository {
-    private static final String VISIBLE = "r.status='APPROVED' AND r.deleted_at IS NULL AND r.published_at IS NOT NULL";
+    private static final String VISIBLE = ResourceVisibility.PUBLISHED;
     private static final String FROM = """
         FROM teaching_resource r JOIN course c ON c.id=r.course_id
         JOIN resource_category k ON k.id=r.category_id JOIN app_user u ON u.id=r.created_by

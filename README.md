@@ -2,7 +2,7 @@
 
 课题名称：基于SpringBoot的课程思政教学资源管理系统设计与实现。
 
-当前完成第一至七阶段：认证权限、用户与基础数据管理、教师资源建设、提交审核、驳回重提与审核发布、教师/学生资源使用、基础统计，以及统一前端、三角色工作台/门户、课程导航、思政专题和本人历史展示。已在本地开发/测试环境验证既定核心业务闭环；不代表生产部署或真实教学应用效果。发布后修改、撤回、下架与版本管理不在当前实现范围内。
+当前已完成既定核心业务、三角色工作台/门户及视觉优化。2026-10-20经用户确认增加检索/PDF工具、私人收藏夹、封面与来源、问题反馈、管理员下架/恢复原内容。仅在本地开发/测试环境验证，不代表生产部署或真实教学应用效果；已通过内容改版、撤回审核与复杂版本管理仍未开放。
 
 ## 技术环境
 
@@ -12,9 +12,9 @@ JDK 21.0.11、Maven 3.9.9、Spring Boot 3.5.7、Spring Security 6.5.6、Spring J
 
 ## 初始化数据库
 
-本机项目库为 `management-system`。先使用 MySQL Workbench 或客户端执行 [`database/schema.sql`](database/schema.sql)，再仅在**本地开发环境**执行 [`database/dev-seed.sql`](database/dev-seed.sql)。前者建立既有设计的 11 张表；后者加入三种固定角色和三个开发测试账号，不会覆盖同名已有用户。
+本机项目库为 `management-system`。新库执行 [`database/schema.sql`](database/schema.sql) 建立当前15张表，再仅在**本地开发环境**执行 [`database/dev-seed.sql`](database/dev-seed.sql)，加入固定角色和三个开发测试账号，不覆盖同名已有用户。
 
-已有第一阶段数据库只需执行 [`002-resource-category-description.sql`](database/migrations/002-resource-category-description.sql)，为资源分类增加可空说明字段；该迁移可重复执行，不重建表或删除数据。更新后的 `schema.sql` 用于新库初始化，`CREATE TABLE IF NOT EXISTS` 不会自动升级旧表。中文路径可能导致 MySQL 命令行 `SOURCE` 无法打开文件，可在 Workbench 打开并执行该脚本。
+旧库按需依次执行 [`002-resource-category-description.sql`](database/migrations/002-resource-category-description.sql)、[`003-resource-organization.sql`](database/migrations/003-resource-organization.sql)、[`004-resource-governance.sql`](database/migrations/004-resource-governance.sql)，均为可重复、保留数据的增量。003增加私人目录/资源说明，004增加下架标记/发布历史/私人反馈。新schema的CREATE TABLE IF NOT EXISTS不会升级旧表。可在Workbench执行，或在已配置本机项目连接后运行 `./scripts/run-local-migration.ps1 -File 004-resource-governance.sql`，不要打印或提交本地配置。
 
 `dev-seed.sql` 仅供毕业设计本地测试，**不得在公开或正式环境运行**。如果将系统部署到其他环境，应创建独立账号并使用新密码；不要沿用下表的测试密码。
 
@@ -119,7 +119,7 @@ MySQL并发测试仅在本地库准备 `dev_admin_b`，复制dev_admin的BCrypt�
 
 ## 第五阶段：资源中心与使用记录
 
-教师/学生的“资源中心”与教师“我的资源”生命周期管理分开。ADMIN仍使用独立审核入口，不能调用普通资源使用API。可见性统一为 `status='APPROVED' AND deleted_at IS NULL AND published_at IS NOT NULL`，包括我的收藏，不靠页面隐藏进行安全控制。
+教师/学生的“资源中心”与教师“我的资源”生命周期管理分开。ADMIN仍使用独立审核入口，不能调用普通资源使用API。可见性统一为 `status='APPROVED' AND deleted_at IS NULL AND published_at IS NOT NULL AND withdrawn_at IS NULL`，包括我的收藏，不靠页面隐藏进行安全控制。
 
 | 方法与路径 | 行为（仅TEACHER/STUDENT） |
 |---|---|
@@ -144,6 +144,8 @@ PDF使用本地PDF.js worker、图片授权Blob；Office只给下载提示，不
 ADMIN菜单“统计概览”对应 /statistics，调用 `GET /api/admin/statistics/overview`；教师/学生403，未登录401。统一Session认证和响应结构不变。展示用户角色/状态、三种基础数据总数/启用数、资源状态和独立软删除数、累计浏览/下载与当前公开收藏，以及已发布资源的课程/分类/元素分布。卡片和每页10项表格，无新增图表依赖。
 
 当前资源排除软删除；已发布要求APPROVED、未删除、发布时间非空。浏览/下载保留软删除历史；收藏只计active=TRUE且资源仍已发布；分布包含停用基础数据历史关联与零资源项，多元素合计不等于资源总数。仅显示本地开发/测试库数据，不做UV、趋势、排行、推荐或学习效果评估。
+
+以上为第六阶段历史口径。当前发布治理补充withdrawn_at为空，已下架单列；浏览/下载事件仍累计，收藏与分布仅统计当前可用资源。
 
 最终测试在backend目录启用四组真实MySQL测试开关：
 
@@ -187,6 +189,20 @@ mvn -B package
 
 ## 学生门户：年轻数字学习平台风
 
+后续增强功能、全部真实测试和当前限制见文末“资源发现与治理增强”。
+
 根据最终确认的第二套预览，先将学生门户及资源页面调整为冷白、蓝紫与少量青柠色的数字学习风格。新增学生专属样式隔离，保留真实课程、专题、收藏及历史；资源类型设计封面不是附件缩略图。不修改登录页、管理员/教师布局、后端、数据库、认证、权限或API，不新增依赖。
 
 最终构建通过，既有核心HTTP回归175项断言通过，浏览器实际验证三角色登录、学生搜索/筛选/分页、收藏往返、PDF预览、下载与历史、课程和专题跳转，以及390px/320px响应式与抽屉键盘操作。详细记录见 [`docs/19-学生数字学习门户视觉落地记录.md`](docs/19-学生数字学习门户视觉落地记录.md)，运行截图保留于本机 `tmp/student-digital/`。本轮未重跑全量后端测试，不将本地测试数据描述为正式教学应用效果。
+
+## 资源发现与治理增强（2026-10-20）
+
+- 检索支持文件格式、发布日期、三种白名单排序与URL保留，PDF支持跳页、缩放、全屏。
+- 教师/学生私人一级收藏夹；教师本人草稿/驳回可选维护真实封面、作者、来源和使用说明；提交后只读。
+- 资源详情可反馈问题，/my-feedback查看本人处理结果；ADMIN的/resource-feedback可核查并以必填说明结案，不自动下架。
+- 台账/published-resources可筛选当前已发布/已下架/全部。ADMIN须填原因下架，可恢复原始已审核内容。下架不删除文件、审核、收藏或使用事件；普通入口统一404或排除。不能撤回已下载到客户端的文件。
+- 新增GET `/api/admin/published-resources/{id}/publication`，POST同前缀`/{id}/withdraw|restore`；POST `/api/resources/{id}/feedback`，GET `/api/resource-feedback/mine`，GET `/api/admin/resource-feedback`，POST同前缀`/{id}/handle`。沿用Session、CSRF与统一响应。
+
+在backend启用STAGE3/4/5/6/7_MYSQL_TEST及GOVERNANCE_MYSQL_TEST=true后运行`mvn -B test`，本轮229项全部通过、零跳过。新增真实治理HTTP脚本`test-resource-governance.ps1`；检索/收藏封面分别由`test-resource-discovery.ps1`、`test-resource-organization.ps1`验证。均仅用于本机开发库，创建带标签的测试材料并保留审核等历史；治理脚本失败时尝试恢复自己的夹具。日志和截图在忽略的tmp/enhancements目录。详情及已知限制见[增强记录](docs/20-资源发现与治理增强记录.md)。
+
+治理阶段于2026-10-31重新验收，当前记录见[交付验收](docs/24-资源反馈与发布治理交付验收.md)。新增`scripts/test-resource-governance-browser.mjs`以隔离Edge执行三角色可见表单操作和窄屏检查；需独立安装的Playwright（或PLAYWRIGHT_MODULE_PATH指向现有安装）、三个GOVERNANCE_TEST_ADMIN/TEACHER/STUDENT_PASSWORD环境变量，以及HTTP套件使用的本地测试PDF/PNG。脚本只允许localhost/127.0.0.1，创建自己的标记夹具，结束时恢复自己的下架状态，不读取个人浏览器配置或修改正式材料。

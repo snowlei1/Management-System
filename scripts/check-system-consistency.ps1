@@ -16,6 +16,11 @@ function SQL([string]$query){
 $checks=[ordered]@{
     approvedWithoutPublication="SELECT COUNT(*) FROM teaching_resource WHERE status='APPROVED' AND published_at IS NULL"
     unexpectedPublication="SELECT COUNT(*) FROM teaching_resource WHERE status<>'APPROVED' AND published_at IS NOT NULL"
+    invalidWithdrawal="SELECT COUNT(*) FROM teaching_resource WHERE withdrawn_at IS NOT NULL AND (status<>'APPROVED' OR published_at IS NULL)"
+    orphanPublication='SELECT COUNT(*) FROM publication_event p LEFT JOIN teaching_resource r ON r.id=p.resource_id LEFT JOIN app_user u ON u.id=p.actor_id WHERE r.id IS NULL OR u.id IS NULL'
+    orphanFeedback='SELECT COUNT(*) FROM resource_feedback f LEFT JOIN teaching_resource r ON r.id=f.resource_id LEFT JOIN app_user u ON u.id=f.user_id LEFT JOIN app_user h ON h.id=f.handled_by WHERE r.id IS NULL OR u.id IS NULL OR (f.handled_by IS NOT NULL AND h.id IS NULL)'
+    inconsistentFeedback="SELECT COUNT(*) FROM resource_feedback WHERE (status='OPEN' AND (handled_by IS NOT NULL OR handled_at IS NOT NULL OR response IS NOT NULL)) OR (status<>'OPEN' AND (handled_by IS NULL OR handled_at IS NULL OR response IS NULL))"
+    crossUserFolder='SELECT COUNT(*) FROM favorite f JOIN favorite_folder g ON g.id=f.folder_id WHERE f.user_id<>g.user_id'
     duplicateAuditRounds='SELECT COUNT(*) FROM (SELECT resource_id,submission_no FROM audit_record GROUP BY resource_id,submission_no HAVING COUNT(*)>1) x'
     orphanResourceBase='SELECT COUNT(*) FROM teaching_resource r LEFT JOIN app_user u ON u.id=r.created_by LEFT JOIN course c ON c.id=r.course_id LEFT JOIN resource_category k ON k.id=r.category_id WHERE u.id IS NULL OR c.id IS NULL OR k.id IS NULL'
     orphanElements='SELECT COUNT(*) FROM resource_element_relation x LEFT JOIN teaching_resource r ON r.id=x.resource_id LEFT JOIN ideological_element e ON e.id=x.element_id WHERE r.id IS NULL OR e.id IS NULL'
@@ -37,10 +42,20 @@ foreach($line in (SQL 'SELECT id,file_storage_key,file_size_bytes FROM teaching_
     if(-not [IO.File]::Exists($path)){$missing+=$parts[0]}
     elseif(([IO.FileInfo]$path).Length -ne [long]$parts[2]){$sizeMismatch+=$parts[0]}
 }
+$coverRows=0
+foreach($line in (SQL 'SELECT resource_id,cover_key,cover_size FROM resource_metadata WHERE cover_key IS NOT NULL')){
+    $parts=$line.Split("`t");$coverRows++;$key=$parts[1]
+    if($key -notmatch '^[a-f0-9-]{36}\.png$'){$unsafe+="cover:$($parts[0])";continue}
+    $relative=Join-Path 'covers' $key;$references[$relative]=$true
+    $path=[IO.Path]::GetFullPath((Join-Path $root $relative))
+    if(-not $path.StartsWith($root+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)){$unsafe+="cover:$($parts[0])";continue}
+    if(-not [IO.File]::Exists($path)){$missing+="cover:$($parts[0])"}
+    elseif(([IO.FileInfo]$path).Length -ne [long]$parts[2]){$sizeMismatch+="cover:$($parts[0])"}
+}
 $files=@();if([IO.Directory]::Exists($root)){$files=@([IO.Directory]::EnumerateFiles($root,'*',[IO.SearchOption]::AllDirectories))}
 $unreferenced=@();foreach($path in $files){$relative=[IO.Path]::GetRelativePath($root,$path);if(-not $references.ContainsKey($relative)){$unreferenced+=$relative}}
 [pscustomobject]@{
-    DatabaseChecks=$results;ResourceRows=$resourceRows;UniqueFileKeys=$references.Count;DiskFiles=$files.Count
+    DatabaseChecks=$results;ResourceRows=$resourceRows;CoverRows=$coverRows;UniqueFileKeys=$references.Count;DiskFiles=$files.Count
     MissingResourceIds=$missing;UnsafeResourceIds=$unsafe;SizeMismatchResourceIds=$sizeMismatch;UnreferencedFiles=$unreferenced
     Scope='All resource rows including soft-deleted; read-only local development snapshot; no automatic cleanup'
 }|ConvertTo-Json -Depth 8

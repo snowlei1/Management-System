@@ -11,11 +11,11 @@ const groups = computed(() => {
   const common = { label: '工作空间', items: [item('/', authState.user?.role === 'STUDENT' ? '资源门户' : '工作台', 'home')] }
   if (authState.user?.role === 'ADMIN') return [common,
     { label: '基础管理', items: [item('/users', '用户管理', 'users'), item('/courses', '课程管理', 'course'), item('/ideological-elements', '课程思政元素', 'tags'), item('/resource-categories', '资源分类', 'category')] },
-    { label: '资源治理', items: [item('/resource-reviews', '资源审核', 'audit'), item('/published-resources', '已发布资源台账', 'file'), item('/statistics', '统计概览', 'chart')] },
+    { label: '资源治理', items: [item('/resource-reviews', '资源审核', 'audit'), item('/published-resources', '已发布资源台账', 'file'), item('/resource-feedback', '资源问题反馈', 'audit'), item('/statistics', '统计概览', 'chart')] },
     { label: '我的账户', items: [item('/profile', '个人信息', 'user')] }]
   return [common, ...(authState.user?.role === 'TEACHER' ? [{ label: '资源建设', items: [item('/my-resources', '我的资源', 'file'), item('/my-resources/new', '新建教学资源', 'upload')] }] : []),
     { label: '资源发现', items: [item('/resources', '资源中心', 'category'), item('/course-resources', '课程资源', 'course'), item('/ideological-topics', '思政元素专题', 'tags')] },
-    { label: '我的使用', items: [item('/favorites', '我的收藏', 'favorite'), item('/history/browse', '最近浏览', 'history'), item('/history/downloads', '下载记录', 'download'), item('/profile', '个人信息', 'user')] }]
+    { label: '我的使用', items: [item('/favorites', '我的收藏', 'favorite'), item('/history/browse', '最近浏览', 'history'), item('/history/downloads', '下载记录', 'download'), item('/my-feedback', '我的反馈', 'audit'), item('/profile', '个人信息', 'user')] }]
 })
 const title = computed(() => route.meta.title || groups.value.flatMap(g => g.items).filter(i => i.path === route.path || i.path !== '/' && route.path.startsWith(i.path + '/')).sort((a,b) => b.path.length - a.path.length)[0]?.label || '资源详情')
 const parent = computed(() => groups.value.find(g => g.items.some(i => i.path !== '/' && route.path.startsWith(i.path)))?.label || '工作空间')

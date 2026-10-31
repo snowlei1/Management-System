@@ -12,7 +12,7 @@ onMounted(async () => { try { data.value = await portalApi.dashboard() } catch (
   <section class="page-heading heading-row"><div><p class="eyebrow">资源建设 / 教师工作台</p><h1>教师工作台</h1><p class="muted">跟进本人资源进度、处理审核意见，查阅已发布资源的使用记录。</p></div><RouterLink class="primary" to="/my-resources/new"><AppIcon name="upload"/>新建教学资源</RouterLink></section>
   <p v-if="error" class="message error" role="alert">{{error}}</p><LoadingState v-if="loading"/>
   <template v-if="data">
-    <nav class="teacher-progress-bar" aria-label="本人资源状态"><RouterLink v-for="[code,label] in [['DRAFT','草稿'],['PENDING','审核中'],['REJECTED','已驳回'],['APPROVED','已发布']]" :key="code" :to="`/my-resources?status=${code}`" :class="{ 'progress-attention':code==='REJECTED' && data.counts.REJECTED>0 }"><span>{{label}}</span><strong>{{data.counts[code]}}</strong></RouterLink></nav>
+    <nav class="teacher-progress-bar" aria-label="本人资源状态"><RouterLink v-for="[code,label] in [['DRAFT','草稿'],['PENDING','审核中'],['REJECTED','已驳回'],['APPROVED','审核通过']]" :key="code" :to="`/my-resources?status=${code}`" :class="{ 'progress-attention':code==='REJECTED' && data.counts.REJECTED>0 }"><span>{{label}}</span><strong>{{data.counts[code]}}</strong></RouterLink></nav>
     <div class="teacher-main teacher-workspace">
       <div>
         <section class="work-section"><div class="section-heading"><h2>最近编辑</h2><RouterLink to="/my-resources" class="text-button">全部资源</RouterLink></div>
