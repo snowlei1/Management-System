@@ -61,9 +61,28 @@ async function responsive(page, name) {
   for (const width of [390, 320]) {
     await page.setViewportSize({ width, height: 844 })
     check(`${name} no page overflow at ${width}px`, await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+    if (['student-feedback', 'admin-feedback', 'teacher-feedback'].includes(name)) {
+      const layout = await page.locator('.feedback-table-wrap').evaluate(container => {
+        const rows = [...container.querySelectorAll('tbody tr')]
+        const cells = rows.flatMap(row => [...row.querySelectorAll('td')])
+        return {
+          contentFits: container.scrollWidth <= container.clientWidth,
+          cellsFit: cells.every(cell => {
+            const bounds = cell.getBoundingClientRect()
+            return bounds.left >= 0 && bounds.right <= innerWidth
+          }),
+          statusBeforeDescription: rows.every(row => row.querySelector('.feedback-state').getBoundingClientRect().top < row.querySelector('.feedback-description').getBoundingClientRect().top),
+        }
+      })
+      check(`${name} entire record and reply fit at ${width}px`, layout.contentFits && layout.cellsFit)
+      check(`${name} status precedes problem text at ${width}px`, layout.statusBeforeDescription)
+    }
     await screenshot(page, `${name}-${width}`, name !== 'admin-publication')
   }
   await page.setViewportSize({ width: 1440, height: 900 })
+  if (['student-feedback', 'admin-feedback', 'teacher-feedback'].includes(name)) {
+    check(`${name} desktop table restored`, await page.locator('.feedback-table').evaluate(table => getComputedStyle(table).display === 'table' && getComputedStyle(table.querySelector('.mobile-field-label')).display === 'none'))
+  }
 }
 try {
   admin = await login('admin')
@@ -116,15 +135,19 @@ try {
   check('teacher admin route redirected', new URL(teacher.page.url()).pathname === '/')
   check('teacher admin API forbidden', (await api(teacher, 'GET', '/admin/resource-feedback')).status() === 403)
   check('student admin API forbidden', (await api(student, 'GET', '/admin/resource-feedback')).status() === 403)
+  await admin.page.setViewportSize({ width: 320, height: 844 })
   await admin.page.goto('/resource-feedback')
   const adminRow = admin.page.getByRole('row').filter({ hasText: description })
   await adminRow.getByRole('button', { name: '处理反馈', exact: true }).click()
   await admin.page.locator('#handle-status').selectOption('RESOLVED')
   const reply = `浏览器处理-${tag}：已核对本地验收材料，仅用于测试。`
   await admin.page.locator('#handle-response').fill(reply)
+  check('admin handling form fits 320px', await admin.page.locator('.feedback-handling').evaluate(form => form.scrollWidth <= form.clientWidth && form.getBoundingClientRect().right <= innerWidth))
+  await screenshot(admin.page, 'admin-feedback-handling-320', false)
   await changed(admin.page, `/api/admin/resource-feedback/${ownFeedback.id}/handle`, () => admin.page.getByRole('button', { name: '确认保存处理结果', exact: true }).click())
   await admin.page.getByRole('status').filter({ hasText: '处理结果已保存' }).waitFor()
   check('admin handled through visible form', true)
+  await admin.page.setViewportSize({ width: 1440, height: 900 })
   await screenshot(admin.page, 'admin-feedback-handled')
   await responsive(admin.page, 'admin-feedback')
   await student.page.reload()
@@ -176,6 +199,31 @@ try {
   await student.page.getByRole('button', { name: '反馈问题', exact: true }).waitFor()
   check('restored resource visible again in browser', true)
   await screenshot(student.page, 'student-resource-restored')
+
+  await teacher.page.goto(`/resources/${id}`)
+  await teacher.page.getByRole('button', { name: '反馈问题', exact: true }).click()
+  const teacherDescription = `教师窄屏验收-${tag} ${'ResourceReference'.repeat(25)}`
+  await teacher.page.locator('#feedback-description').fill(teacherDescription)
+  await changed(teacher.page, `/api/resources/${id}/feedback`, () => teacher.page.getByRole('button', { name: '提交反馈', exact: true }).click())
+  await teacher.page.getByRole('status').filter({ hasText: '反馈已提交' }).waitFor()
+  await admin.page.setViewportSize({ width: 390, height: 844 })
+  await admin.page.goto('/resource-feedback')
+  const teacherReport = admin.page.getByRole('row').filter({ hasText: teacherDescription })
+  await teacherReport.getByRole('button', { name: '处理反馈', exact: true }).click()
+  await admin.page.locator('#handle-status').selectOption('DISMISSED')
+  const teacherReply = `本地测试结论-${tag} ${'ReferenceChecked'.repeat(25)}`
+  await admin.page.locator('#handle-response').fill(teacherReply)
+  const teacherFeedback = (await jsonOK(await api(teacher, 'GET', `/resource-feedback/mine?resourceId=${id}`))).items[0]
+  await changed(admin.page, `/api/admin/resource-feedback/${teacherFeedback.id}/handle`, () => admin.page.getByRole('button', { name: '确认保存处理结果', exact: true }).click())
+  await admin.page.getByRole('status').filter({ hasText: '处理结果已保存' }).waitFor()
+  await teacher.page.goto('/my-feedback')
+  const teacherRow = teacher.page.getByRole('row').filter({ hasText: teacherDescription })
+  await teacherRow.getByText(teacherReply, { exact: true }).waitFor()
+  check('dismissed feedback has a distinct neutral status', await teacherRow.locator('.feedback-dismissed').textContent() === '不予采纳')
+  check('long feedback and response retained in full', (await teacherRow.textContent()).includes(teacherDescription) && (await teacherRow.textContent()).includes(teacherReply))
+  await screenshot(teacher.page, 'teacher-feedback-desktop')
+  await responsive(teacher.page, 'teacher-feedback')
+  check('student feedback remains private after teacher report', (await jsonOK(await api(student, 'GET', `/resource-feedback/mine?resourceId=${id}`))).total === 1)
   check('no browser page errors', errors.length === 0)
   console.log(`GOVERNANCE_BROWSER_CHECKS_PASSED=${checks} RESOURCE_ID=${id} TEST_TAG=${tag}`)
   console.log(`SCREENSHOTS=${output}`)
